@@ -23,7 +23,7 @@
 - Randomization Options:
   - **Poster Randomizer**: Randomly select one pack for all posters or mix textures from multiple packs.
   - **Lobby Random**: Randomize posters on every new lobby or only when the game is reopened.
-- Compatible with ShipWindows and WiderShipMod **(PLANNED)**.
+- Compatible with ShipWindows **(IMPLEMENTED)** and WiderShipMod **(PLANNED)**.
 
 ---
 
