@@ -51,17 +51,17 @@ _<p><small>Names of the poster image should be exactly like shown in structure</
 ---
 
 ## Configuration
-The mod automatically generates a configuration file (CustomPosters.cfg) in the BepInEx/config folder. You can use this file to customize the behavior of the mod
+The mod automatically generates a configuration file (`CustomPosters.cfg`) in the `BepInEx/config` folder. You can use this file to customize the behavior of the mod
 
 ### Configuration Options
 
 **PosterRandomizer**:
 - *Enabled (Default)*: Randomly select one pack and use it for all posters.
 - *Disabled*: Randomly select a pack for each poster individually.
-LobbyRandom:
+**LobbyRandom**:
 - *Enabled (Default)*: Randomize posters on every new lobby.
 - *Disabled*: Randomize posters only when the game is re-opened.
-Enable/Disable Packs:
+**Enable/Disable Packs**:
 - Each pack has an `Enabled` setting in the configuration file. Set it to true or false to enable or disable the pack.
 
 ---
