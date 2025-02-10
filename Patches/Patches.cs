@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -34,25 +35,21 @@ namespace CustomPosters
 
         private static void HideVanillaPosterPlane()
         {
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
+            // Check for the renamed Plane.001 (Old) first
+            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
             if (posterPlane != null)
             {
                 posterPlane.SetActive(false);
-                Logger.LogInfo("Vanilla poster plane (Plane.001) hidden.");
+                Logger.LogInfo("Vanilla poster plane (Plane.001 (Old)) hidden.");
+                return;
             }
-            else
-            {
-                Logger.LogWarning("Vanilla poster plane (Plane.001) not found!");
-            }
-        }
 
-        private static void ShowVanillaPosterPlane()
-        {
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
+            // Fallback to the original Plane.001
+            posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
             if (posterPlane != null)
             {
-                posterPlane.SetActive(true);
-                Logger.LogInfo("Vanilla poster plane (Plane.001) re-enabled.");
+                posterPlane.SetActive(false);
+                Logger.LogInfo("Vanilla poster plane (Plane.001) destroyed.");
             }
             else
             {
@@ -80,17 +77,29 @@ namespace CustomPosters
             postersParent.transform.SetParent(hangarShip.transform);
             postersParent.transform.localPosition = Vector3.zero;
 
-            var originalPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
-            if (originalPlane == null)
+            // Find and destroy the vanilla Plane.001
+            var vanillaPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
+            if (vanillaPlane != null)
             {
-                Logger.LogError("Original Plane.001 not found under HangarShip!");
+                Logger.LogInfo("Destroying vanilla Plane.001.");
+                UnityEngine.Object.Destroy(vanillaPlane);
+            }
+            else
+            {
+                Logger.LogWarning("Vanilla Plane.001 not found under HangarShip!");
+            }
+
+            var shipWindowsPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
+            if (shipWindowsPlane == null)
+            {
+                Logger.LogError("ShipWindows Plane.001 not found under HangarShip!");
                 return false;
             }
 
-            var originalRenderer = originalPlane.GetComponent<MeshRenderer>();
+            var originalRenderer = shipWindowsPlane.GetComponent<MeshRenderer>();
             if (originalRenderer == null || originalRenderer.materials.Length == 0)
             {
-                Logger.LogError("Original Plane.001 renderer or materials not found!");
+                Logger.LogError("ShipWindows Plane.001 renderer or materials not found!");
                 return false;
             }
 
@@ -105,6 +114,15 @@ namespace CustomPosters
         (new Vector3(5.5286f, 2.5882f, -17.3541f), new Vector3(0, 201.1556f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"),
         (new Vector3(3.0647f, 2.8174f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
             };
+
+            // Reposition Poster4 if ShipWindows is installed and window2 is enabled
+            if (Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled)
+            {
+                Logger.LogInfo("ShipWindows compatibility: Repositioning Poster4 due to window2 being enabled.");
+                posterData[3].position = new Vector3(6.3616f, 3.3081f, -10.8221f);
+                posterData[3].rotation = new Vector3(0, 0, 1.4166f);
+                posterData[3].scale = new Vector3(0.7289f, 0.9989f, 1f);
+            }
 
             bool allTexturesLoaded = true;
 
@@ -209,20 +227,39 @@ namespace CustomPosters
         {
             Logger.LogInfo("Updating materials for custom posters");
 
-            // Check if any CustomPosters folder exists
             if (Plugin.PosterFolders.Count == 0)
             {
                 Logger.LogInfo("No CustomPosters folder found. Leaving Plane.001 active.");
                 return;
             }
 
-            // Hide Plane.001 and attempt to create custom posters
             HideVanillaPosterPlane();
 
-            // If CreateCustomPosters fails, re-enable Plane.001
             if (!CreateCustomPosters())
             {
                 ShowVanillaPosterPlane();
+            }
+        }
+
+        private static void ShowVanillaPosterPlane()
+        {
+            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
+            if (posterPlane != null)
+            {
+                posterPlane.SetActive(true);
+                Logger.LogInfo("Vanilla poster plane (Plane.001 (Old)) re-enabled.");
+                return;
+            }
+
+            posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
+            if (posterPlane != null)
+            {
+                posterPlane.SetActive(true);
+                Logger.LogInfo("Vanilla poster plane (Plane.001) re-enabled.");
+            }
+            else
+            {
+                Logger.LogWarning("Vanilla poster plane (Plane.001) not found!");
             }
         }
     }
