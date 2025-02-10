@@ -56,15 +56,11 @@ namespace CustomPosters
                     }
                 }
 
-                // Check if ShipWindows is installed
                 IsShipWindowsInstalled = CheckIfShipWindowsInstalled();
                 if (IsShipWindowsInstalled)
                 {
                     StaticLogger.LogInfo("ShipWindows mod detected. Enabling compatibility...");
                     IsWindow2Enabled = CheckIfWindow2Enabled();
-
-                    // Force enable DontMovePosters in ShipWindows config
-                    ForceEnableDontMovePosters();
                 }
 
                 PosterConfig.Init(Logger);
@@ -92,7 +88,15 @@ namespace CustomPosters
             {
                 if (folder.Contains("ShipWindows"))
                 {
-                    return true;
+                    // Check if the ShipWindows DLL exists (ignore .old files)
+                    var dllFiles = Directory.GetFiles(folder, "*.dll");
+                    foreach (var dllFile in dllFiles)
+                    {
+                        if (!dllFile.EndsWith(".old"))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
             return false;
@@ -123,44 +127,6 @@ namespace CustomPosters
                 StaticLogger.LogError($"Failed to read ShipWindows config: {ex.Message}");
             }
             return false;
-        }
-
-        private static void ForceEnableDontMovePosters()
-        {
-            try
-            {
-                var shipWindowsConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
-                if (!File.Exists(shipWindowsConfigPath))
-                {
-                    StaticLogger.LogWarning("ShipWindows config file not found. Cannot force DontMovePosters to true.");
-                    return;
-                }
-
-                var configLines = File.ReadAllLines(shipWindowsConfigPath).ToList();
-                bool dontMovePostersFound = false;
-
-                for (int i = 0; i < configLines.Count; i++)
-                {
-                    if (configLines[i].Contains("DontMovePosters"))
-                    {
-                        configLines[i] = "DontMovePosters = true";
-                        dontMovePostersFound = true;
-                        break;
-                    }
-                }
-
-                if (!dontMovePostersFound)
-                {
-                    configLines.Add("DontMovePosters = true");
-                }
-
-                File.WriteAllLines(shipWindowsConfigPath, configLines);
-                StaticLogger.LogInfo("Forced DontMovePosters to true in ShipWindows config.");
-            }
-            catch (Exception ex)
-            {
-                StaticLogger.LogError($"Failed to force DontMovePosters to true: {ex.Message}");
-            }
         }
     }
 }
