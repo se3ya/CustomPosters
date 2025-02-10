@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using BepInEx;
+using BepInEx.Logging;
 using HarmonyLib;
 
 namespace CustomPosters
@@ -14,10 +15,17 @@ namespace CustomPosters
         public const string PLUGIN_NAME = "CustomPosters";
         public const string PLUGIN_VERSION = "1.0.0";
 
+        public static bool IsShipWindowsInstalled { get; private set; }
+        public static bool IsWindow2Enabled { get; private set; }
+
+        public static ManualLogSource StaticLogger { get; private set; }
+
         private void Awake()
         {
             try
             {
+                StaticLogger = Logger;
+
                 PosterFolders = Directory.GetDirectories(Paths.PluginPath, Plugin.PLUGIN_NAME, SearchOption.AllDirectories).ToList();
 
                 foreach (var folder in PosterFolders)
@@ -48,17 +56,28 @@ namespace CustomPosters
                     }
                 }
 
+                // Check if ShipWindows is installed
+                IsShipWindowsInstalled = CheckIfShipWindowsInstalled();
+                if (IsShipWindowsInstalled)
+                {
+                    StaticLogger.LogInfo("ShipWindows mod detected. Enabling compatibility...");
+                    IsWindow2Enabled = CheckIfWindow2Enabled();
+
+                    // Force enable DontMovePosters in ShipWindows config
+                    ForceEnableDontMovePosters();
+                }
+
                 PosterConfig.Init(Logger);
                 CustomPosters.Patches.Init(Logger);
 
                 var harmony = new Harmony(Plugin.PLUGIN_GUID);
                 harmony.PatchAll(typeof(CustomPosters.Patches));
 
-                Logger.LogInfo($"Plugin {Plugin.PLUGIN_NAME} ({Plugin.PLUGIN_VERSION}) is loaded!");
+                StaticLogger.LogInfo($"Plugin {Plugin.PLUGIN_NAME} ({Plugin.PLUGIN_VERSION}) is loaded!");
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Failed to initialize plugin: {ex.Message}");
+                StaticLogger.LogError($"Failed to initialize plugin: {ex.Message}");
             }
         }
 
@@ -66,5 +85,82 @@ namespace CustomPosters
         public static readonly List<string> PosterFiles = new();
         public static readonly List<string> TipFiles = new();
         public static Random Rand = new();
+
+        private static bool CheckIfShipWindowsInstalled()
+        {
+            foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
+            {
+                if (folder.Contains("ShipWindows"))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckIfWindow2Enabled()
+        {
+            try
+            {
+                var shipWindowsConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
+                if (!File.Exists(shipWindowsConfigPath))
+                {
+                    StaticLogger.LogWarning("ShipWindows config file not found. Assuming window2 is disabled.");
+                    return false;
+                }
+
+                var configLines = File.ReadAllLines(shipWindowsConfigPath);
+                foreach (var line in configLines)
+                {
+                    if (line.Contains("EnableWindow2") && line.Contains("true"))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                StaticLogger.LogError($"Failed to read ShipWindows config: {ex.Message}");
+            }
+            return false;
+        }
+
+        private static void ForceEnableDontMovePosters()
+        {
+            try
+            {
+                var shipWindowsConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
+                if (!File.Exists(shipWindowsConfigPath))
+                {
+                    StaticLogger.LogWarning("ShipWindows config file not found. Cannot force DontMovePosters to true.");
+                    return;
+                }
+
+                var configLines = File.ReadAllLines(shipWindowsConfigPath).ToList();
+                bool dontMovePostersFound = false;
+
+                for (int i = 0; i < configLines.Count; i++)
+                {
+                    if (configLines[i].Contains("DontMovePosters"))
+                    {
+                        configLines[i] = "DontMovePosters = true";
+                        dontMovePostersFound = true;
+                        break;
+                    }
+                }
+
+                if (!dontMovePostersFound)
+                {
+                    configLines.Add("DontMovePosters = true");
+                }
+
+                File.WriteAllLines(shipWindowsConfigPath, configLines);
+                StaticLogger.LogInfo("Forced DontMovePosters to true in ShipWindows config.");
+            }
+            catch (Exception ex)
+            {
+                StaticLogger.LogError($"Failed to force DontMovePosters to true: {ex.Message}");
+            }
+        }
     }
 }
