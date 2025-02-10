@@ -6,12 +6,12 @@
 
 ### Table of Contents
 
-1. Features
-2. Adding Custom Posters/Creating Custom Posters Mod
-3. Configuration
-4. Troubleshooting
-5. Contributing
-6. License
+1. [Features](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#features)
+2. [Adding Custom Posters/Creating Custom Posters Mod](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)
+3. [Configuration](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#configuration)
+4. [Troubleshooting](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#troubleshooting)
+5. [License](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#license)
+6. [Credits](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#credits)
    
 ---
 
@@ -70,7 +70,7 @@ Enable/Disable Packs:
 ### My Posters Aren't Showing Up
 1. Ensure your images are named correctly (e.g., `Poster1.png`, `CustomTips.png`).
 2. Check the `BepInEx/LogOutput.log` file for errors related to texture loading.
-3. Make sure the posters and tips folders are in the correct location as shown in *Adding Custom Posters/Creating Custom Posters Mod*.
+3. Make sure the posters and tips folders are in the correct location as shown in *[Adding Custom Posters/Creating Custom Posters Mod](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)*.
 
 ### The Default Poster (Plane.001) is Still Visible
 - This happens if the mod fails to load any custom poster texture. Check the log file for errors and ensure your images are valid.
