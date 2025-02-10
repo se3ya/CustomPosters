@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -22,6 +21,7 @@ namespace CustomPosters
 
             configFile = new ConfigFile(Path.Combine(Paths.ConfigPath, "CustomPosters.cfg"), true);
 
+            // Add configuration entries
             PosterRandomizer = configFile.Bind(
                 "Settings", // Section
                 "PosterRandomizer", // Key
@@ -54,7 +54,6 @@ namespace CustomPosters
                 }
 
                 var result = mod.Substring(startIdx, endIdx - startIdx);
-                
                 var conf = configFile.Bind(result, "Enabled", true, $"Enable or disable {result}");
             }
         }
