@@ -19,7 +19,9 @@
 
 - Override the default posters in the ship with your own custom images.
 - Simply drop your images into the `posters` and `tips` folders.
+- Adding multiple poster mods that are compatible with this mod will __work__, as said in *Randomization Options*.
 - If any custom poster fails to load, the mod will revert to the vanilla Plane.001 poster.
+  - If you have more than 2 poster mods and first poster don't load, it will load second poster instead.
 - Randomization Options:
   - **Poster Randomizer**: Randomly select one pack for all posters or mix textures from multiple packs.
   - **Lobby Random**: Randomize posters on every new lobby or only when the game is reopened.
