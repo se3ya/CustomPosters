@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -13,6 +12,8 @@ namespace CustomPosters
     internal class Patches
     {
         private static ManualLogSource Logger { get; set; }
+
+        private static string _selectedPack = null;
 
         public static void Init(ManualLogSource logger)
         {
@@ -35,7 +36,6 @@ namespace CustomPosters
 
         private static void HideVanillaPosterPlane()
         {
-            // Check for the renamed Plane.001 (Old) first
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
             if (posterPlane != null)
             {
@@ -44,12 +44,11 @@ namespace CustomPosters
                 return;
             }
 
-            // Fallback to the original Plane.001
             posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
             if (posterPlane != null)
             {
                 posterPlane.SetActive(false);
-                Logger.LogInfo("Vanilla poster plane (Plane.001) destroyed.");
+                Logger.LogInfo("Vanilla poster plane (Plane.001) hidden.");
             }
             else
             {
@@ -77,18 +76,6 @@ namespace CustomPosters
             postersParent.transform.SetParent(hangarShip.transform);
             postersParent.transform.localPosition = Vector3.zero;
 
-            // Find and destroy the vanilla Plane.001
-            var vanillaPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
-            if (vanillaPlane != null)
-            {
-                Logger.LogInfo("Destroying vanilla Plane.001.");
-                UnityEngine.Object.Destroy(vanillaPlane);
-            }
-            else
-            {
-                Logger.LogWarning("Vanilla Plane.001 not found under HangarShip!");
-            }
-
             var shipWindowsPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
             if (shipWindowsPlane == null)
             {
@@ -107,15 +94,14 @@ namespace CustomPosters
 
             var posterData = new (Vector3 position, Vector3 rotation, Vector3 scale, string name)[]
             {
-        (new Vector3(4.1886f, 2.9318f, -16.8409f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"),
-        (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2"),
-        (new Vector3(9.9186f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3"),
-        (new Vector3(5.2187f, 2.5963f, -11.0945f), new Vector3(0, 337.5868f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"),
-        (new Vector3(5.5286f, 2.5882f, -17.3541f), new Vector3(0, 201.1556f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"),
-        (new Vector3(3.0647f, 2.8174f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
+                (new Vector3(4.1886f, 2.9318f, -16.8409f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"),
+                (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2"),
+                (new Vector3(9.9186f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3"),
+                (new Vector3(5.2187f, 2.5963f, -11.0945f), new Vector3(0, 337.5868f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"),
+                (new Vector3(5.5286f, 2.5882f, -17.3541f), new Vector3(0, 201.1556f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"),
+                (new Vector3(3.0647f, 2.8174f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
             };
 
-            // Reposition Poster4 if ShipWindows is installed and window2 is enabled
             if (Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled)
             {
                 Logger.LogInfo("ShipWindows compatibility: Repositioning Poster4 due to window2 being enabled.");
@@ -124,9 +110,6 @@ namespace CustomPosters
                 posterData[3].scale = new Vector3(0.7289f, 0.9989f, 1f);
             }
 
-            bool allTexturesLoaded = true;
-
-            // Get all enabled packs
             var enabledPacks = Plugin.PosterFolders.Where(folder => PosterConfig.IsPackEnabled(folder)).ToList();
             if (enabledPacks.Count == 0)
             {
@@ -134,13 +117,72 @@ namespace CustomPosters
                 return false;
             }
 
-            // Randomly select a pack if PosterRandomizer is true
-            string selectedPack = null;
+            var enabledPackNames = enabledPacks.Select(pack => Path.GetFileName(Path.GetDirectoryName(pack))).ToList();
+            Logger.LogInfo($"Enabled poster packs: {string.Join(", ", enabledPackNames)}");
+
+            // Handle PosterRandomizer logic
+            List<string> packsToUse;
             if (PosterConfig.PosterRandomizer.Value)
             {
-                selectedPack = enabledPacks[Plugin.Rand.Next(enabledPacks.Count)];
-                Logger.LogInfo($"Selected pack: {selectedPack}");
+                _selectedPack = enabledPacks[Plugin.Rand.Next(enabledPacks.Count)];
+                packsToUse = new List<string> { _selectedPack };
+                var selectedPackName = Path.GetFileName(Path.GetDirectoryName(_selectedPack));
+                Logger.LogInfo($"PosterRandomizer enabled. Using pack: {selectedPackName}");
             }
+            else
+            {
+                packsToUse = enabledPacks;
+                Logger.LogInfo("PosterRandomizer disabled. Combining all enabled packs.");
+            }
+
+            var allTextures = new Dictionary<string, List<(Texture2D texture, string filePath)>>();
+            foreach (var pack in packsToUse)
+            {
+                string postersPath = Path.Combine(pack, "posters");
+                string tipsPath = Path.Combine(pack, "tips");
+
+                if (Directory.Exists(postersPath))
+                {
+                    foreach (var file in Directory.GetFiles(postersPath, "*.png"))
+                    {
+                        var result = LoadTextureFromFile(file);
+                        if (result.texture != null)
+                        {
+                            var posterName = Path.GetFileNameWithoutExtension(file);
+                            if (!allTextures.ContainsKey(posterName))
+                            {
+                                allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
+                            }
+                            allTextures[posterName].Add(result);
+                        }
+                    }
+                }
+
+                if (Directory.Exists(tipsPath))
+                {
+                    foreach (var file in Directory.GetFiles(tipsPath, "*.png"))
+                    {
+                        var result = LoadTextureFromFile(file);
+                        if (result.texture != null)
+                        {
+                            var posterName = Path.GetFileNameWithoutExtension(file);
+                            if (!allTextures.ContainsKey(posterName))
+                            {
+                                allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
+                            }
+                            allTextures[posterName].Add(result);
+                        }
+                    }
+                }
+            }
+
+            if (allTextures.Count == 0)
+            {
+                Logger.LogWarning("No textures found in enabled packs!");
+                return false;
+            }
+
+            bool anyTextureLoaded = false;
 
             for (int i = 0; i < posterData.Length; i++)
             {
@@ -155,72 +197,70 @@ namespace CustomPosters
                 var renderer = poster.GetComponent<MeshRenderer>();
                 renderer.material = new Material(originalMaterial);
 
-                string texturePath;
-
-                if (PosterConfig.PosterRandomizer.Value)
+                if (allTextures.TryGetValue(poster.name, out var textures) && textures.Count > 0)
                 {
-                    // Use the selected pack for all posters
-                    texturePath = poster.name == "CustomTips"
-                        ? Path.Combine(selectedPack, "tips", "CustomTips.png")
-                        : Path.Combine(selectedPack, "posters", $"{poster.name}.png");
+                    var textureData = textures[Plugin.Rand.Next(textures.Count)];
+                    renderer.material.mainTexture = textureData.texture;
+                    anyTextureLoaded = true;
+
+                    var modFolderName = Path.GetFileName(Path.GetDirectoryName(textureData.filePath));
+                    var relativePath = poster.name == "CustomTips"
+                        ? Path.Combine("tips", "CustomTips.png")
+                        : Path.Combine("posters", poster.name + ".png");
+                    var simplifiedPath = Path.Combine(modFolderName, relativePath);
+
+                    Logger.LogInfo($"Loaded texture for {poster.name} from {simplifiedPath}");
                 }
                 else
                 {
-                    // Randomly choose a pack for each poster
-                    var randomPack = enabledPacks[Plugin.Rand.Next(enabledPacks.Count)];
-                    texturePath = poster.name == "CustomTips"
-                        ? Path.Combine(randomPack, "tips", "CustomTips.png")
-                        : Path.Combine(randomPack, "posters", $"{poster.name}.png");
-                }
-
-                var texture = LoadTextureFromFile(texturePath);
-                if (texture != null)
-                {
-                    renderer.material.mainTexture = texture;
-                }
-                else
-                {
-                    Logger.LogWarning($"Failed to load texture for {poster.name} from {texturePath}");
-                    allTexturesLoaded = false;
-                    break;
+                    Logger.LogError($"No textures found for {poster.name}. Disabling the poster.");
+                    poster.SetActive(false);
                 }
             }
 
-            if (!allTexturesLoaded)
+            if (!anyTextureLoaded)
             {
                 UnityEngine.Object.Destroy(postersParent);
-                Logger.LogWarning("Custom posters creation aborted due to missing textures.");
+                Logger.LogWarning("No custom posters were created due to missing textures.");
                 return false;
+            }
+
+            var vanillaPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
+            if (vanillaPlane != null)
+            {
+                Logger.LogInfo("Destroying vanilla Plane.001.");
+                UnityEngine.Object.Destroy(vanillaPlane);
             }
 
             Logger.LogInfo("Custom posters created successfully.");
             return true;
         }
 
-        private static Texture2D LoadTextureFromFile(string relativePath)
+        private static (Texture2D texture, string filePath) LoadTextureFromFile(string fullPath)
         {
-            foreach (var folder in Plugin.PosterFolders)
+            if (File.Exists(fullPath))
             {
-                string fullPath = Path.Combine(folder, relativePath);
-                if (File.Exists(fullPath))
+                var texture = new Texture2D(2, 2);
+                if (texture.LoadImage(File.ReadAllBytes(fullPath)))
                 {
-                    var texture = new Texture2D(2, 2);
-                    if (texture.LoadImage(File.ReadAllBytes(fullPath)))
-                    {
-                        texture.filterMode = FilterMode.Point;
-                        Logger.LogInfo($"Loaded texture from {fullPath}");
-                        return texture;
-                    }
-                    else
-                    {
-                        Logger.LogError($"Failed to load texture from {fullPath}");
-                        return null;
-                    }
+                    texture.filterMode = FilterMode.Point;
+                    return (texture, fullPath);
+                }
+                else
+                {
+                    var directoryName = Path.GetFileName(Path.GetDirectoryName(fullPath));
+                    var fileName = Path.GetFileName(fullPath);
+                    var simplifiedPath = Path.Combine(directoryName, fileName);
+                    Logger.LogError($"Failed to load texture from {simplifiedPath}");
+                    return (null, null);
                 }
             }
 
-            Logger.LogError($"Texture file not found: {relativePath}");
-            return null;
+            var errorDirectoryName = Path.GetFileName(Path.GetDirectoryName(fullPath));
+            var errorFileName = Path.GetFileName(fullPath);
+            var simplifiedErrorPath = Path.Combine(errorDirectoryName, errorFileName);
+            Logger.LogError($"Texture file not found: {simplifiedErrorPath}");
+            return (null, null);
         }
 
         private static void UpdateMaterials()
