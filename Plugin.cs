@@ -14,7 +14,7 @@ namespace CustomPosters
         public const string PLUGIN_GUID = "seeya.customposters";
         public const string PLUGIN_NAME = "CustomPosters";
         public const string PLUGIN_VERSION = "1.0.0";
-
+        
         public static bool IsShipWindowsInstalled { get; private set; }
         public static bool IsWindow2Enabled { get; private set; }
 
@@ -59,7 +59,7 @@ namespace CustomPosters
                 IsShipWindowsInstalled = CheckIfShipWindowsInstalled();
                 if (IsShipWindowsInstalled)
                 {
-                    StaticLogger.LogInfo("ShipWindows mod detected. Enabling compatibility...");
+                    StaticLogger.LogInfo("ShipWindows detected.");
                     IsWindow2Enabled = CheckIfWindow2Enabled();
                 }
 
@@ -88,7 +88,6 @@ namespace CustomPosters
             {
                 if (folder.Contains("ShipWindows"))
                 {
-                    // Check if the ShipWindows DLL exists (ignore .old files)
                     var dllFiles = Directory.GetFiles(folder, "*.dll");
                     foreach (var dllFile in dllFiles)
                     {
@@ -109,7 +108,7 @@ namespace CustomPosters
                 var shipWindowsConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
                 if (!File.Exists(shipWindowsConfigPath))
                 {
-                    StaticLogger.LogWarning("ShipWindows config file not found. Assuming window2 is disabled.");
+                    StaticLogger.LogWarning("ShipWindows config file not found. Assuming Window2 is disabled.");
                     return false;
                 }
 
