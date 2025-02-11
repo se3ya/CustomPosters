@@ -21,19 +21,11 @@ namespace CustomPosters
 
             configFile = new ConfigFile(Path.Combine(Paths.ConfigPath, "CustomPosters.cfg"), true);
 
-            // Add configuration entries
             PosterRandomizer = configFile.Bind(
                 "Settings", // Section
                 "PosterRandomizer", // Key
                 true, // Default value
                 "If true, randomizes only poster packs. If false, combines all enabled packs and randomizes textures." // Description
-            );
-
-            LobbyRandom = configFile.Bind(
-                "Settings", // Section
-                "LobbyRandom", // Key
-                true, // Default value
-                "If true, randomizes posters on every new lobby. If false, randomizes only on game re-open." // Description
             );
 
             foreach (var mod in Plugin.PosterFolders)
@@ -54,6 +46,7 @@ namespace CustomPosters
                 }
 
                 var result = mod.Substring(startIdx, endIdx - startIdx);
+
                 var conf = configFile.Bind(result, "Enabled", true, $"Enable or disable {result}");
             }
         }
