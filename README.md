@@ -58,9 +58,11 @@ The mod automatically generates a configuration file (`CustomPosters.cfg`) in th
 **PosterRandomizer**:
 - *Enabled (Default)*: Randomly select one pack and use it for all posters.
 - *Disabled*: Randomly select a pack for each poster individually.
+  
 **LobbyRandom**:
 - *Enabled (Default)*: Randomize posters on every new lobby.
 - *Disabled*: Randomize posters only when the game is re-opened.
+  
 **Enable/Disable Packs**:
 - Each pack has an `Enabled` setting in the configuration file. Set it to true or false to enable or disable the pack.
 
