@@ -20,12 +20,11 @@
 - Override the default posters in the ship with your own custom images.
 - Simply drop your images into the `posters` and `tips` folders.
 - Adding multiple poster mods that are compatible with this mod will __work__, as said in *Randomization Options*.
-- If any custom poster fails to load, the mod will revert to the vanilla Plane.001 poster.
-  - If you have more than 2 poster mods and first poster don't load, it will load second poster instead.
+- If any custom poster fails to load, the mod will disable that poster at all.
+  - If you have more than 2 poster mods and first poster don't load, it will try to load second poster instead.
 - Randomization Options:
   - **Poster Randomizer**: Randomly select one pack for all posters or mix textures from multiple packs.
-  - **Lobby Random**: Randomize posters on every new lobby or only when the game is reopened.
-- Compatible with ShipWindows **(IMPLEMENTED)** and WiderShipMod **(PLANNED)**.
+- Compatible with ShipWindows *(IMPLEMENTED)* and WiderShipMod **(PLANNED)**.
 
 ---
 
@@ -61,10 +60,6 @@ The mod automatically generates a configuration file (`CustomPosters.cfg`) in th
 - *Enabled (Default)*: Randomly select one pack and use it for all posters.
 - *Disabled*: Randomly select a pack for each poster individually.
   
-**LobbyRandom**:
-- *Enabled (Default)*: Randomize posters on every new lobby.
-- *Disabled*: Randomize posters only when the game is re-opened.
-  
 **Enable/Disable Packs**:
 - Each pack has an `Enabled` setting in the configuration file. Set it to true or false to enable or disable the pack.
 
@@ -77,7 +72,7 @@ The mod automatically generates a configuration file (`CustomPosters.cfg`) in th
 3. Make sure the posters and tips folders are in the correct location as shown in *[Adding Custom Posters/Creating Custom Posters Mod](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)*.
 
 ### The Default Poster (Plane.001) is Still Visible
-- This happens if the mod fails to load any custom poster texture. Check the log file for errors and ensure your images are valid.
+- This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled, check log file for errors and ensure your images are valid.
 
 ---
 
