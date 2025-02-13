@@ -51,6 +51,11 @@ namespace CustomPosters
             }
         }
 
+        /// <summary>
+        /// Checks if a specific pack is enabled in the configuration.
+        /// </summary>
+        /// <param name="folder">The folder path of the pack.</param>
+        /// <returns>True if the pack is enabled, false otherwise.</returns>
         public static bool IsPackEnabled(string folder)
         {
             var startIdx = folder.IndexOf(@"plugins\", StringComparison.Ordinal);
@@ -63,6 +68,7 @@ namespace CustomPosters
 
             var packName = folder.Substring(startIdx, endIdx - startIdx);
 
+            // Check if the pack is enabled in the configuration
             return configFile.Bind(packName, "Enabled", true).Value;
         }
     }
