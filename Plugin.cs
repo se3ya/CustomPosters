@@ -14,9 +14,14 @@ namespace CustomPosters
         public const string PLUGIN_GUID = "seeya.customposters";
         public const string PLUGIN_NAME = "CustomPosters";
         public const string PLUGIN_VERSION = "1.0.0";
-        
+
+        // shipWindows config
         public static bool IsShipWindowsInstalled { get; private set; }
         public static bool IsWindow2Enabled { get; private set; }
+
+        // widerShipMod config
+        public static bool IsWiderShipModInstalled { get; private set; }
+        public static string WiderShipExtendedSide { get; private set; }
 
         public static ManualLogSource StaticLogger { get; private set; }
 
@@ -63,6 +68,14 @@ namespace CustomPosters
                     IsWindow2Enabled = CheckIfWindow2Enabled();
                 }
 
+                IsWiderShipModInstalled = CheckIfWiderShipModInstalled();
+                if (IsWiderShipModInstalled)
+                {
+                    StaticLogger.LogInfo("WiderShipMod detected.");
+                    WiderShipExtendedSide = GetWiderShipExtendedSide();
+                    StaticLogger.LogInfo($"WiderShipMod Extended Side: {WiderShipExtendedSide}");
+                }
+
                 PosterConfig.Init(Logger);
                 CustomPosters.Patches.Init(Logger);
 
@@ -88,6 +101,7 @@ namespace CustomPosters
             {
                 if (folder.Contains("ShipWindows"))
                 {
+                    // Check if the ShipWindows DLL exists (ignore .old files)
                     var dllFiles = Directory.GetFiles(folder, "*.dll");
                     foreach (var dllFile in dllFiles)
                     {
@@ -126,6 +140,55 @@ namespace CustomPosters
                 StaticLogger.LogError($"Failed to read ShipWindows config: {ex.Message}");
             }
             return false;
+        }
+
+        private static bool CheckIfWiderShipModInstalled()
+        {
+            foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
+            {
+                if (folder.Contains("mborsh-Wider_Ship_Mod"))
+                {
+                    // Check if the WiderShipMod DLL exists (ignore .old files)
+                    var dllFiles = Directory.GetFiles(folder, "*.dll");
+                    foreach (var dllFile in dllFiles)
+                    {
+                        if (dllFile.EndsWith("WiderShipMod.dll") && !dllFile.EndsWith(".old"))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static string GetWiderShipExtendedSide()
+        {
+            try
+            {
+                var widerShipConfigPath = Path.Combine(Paths.ConfigPath, "mborsh.WiderShipMod.cfg");
+                if (!File.Exists(widerShipConfigPath))
+                {
+                    StaticLogger.LogWarning("WiderShipMod config file not found. Assuming Extended Side is 'Both'.");
+                    return "Both";
+                }
+
+                var configLines = File.ReadAllLines(widerShipConfigPath);
+                foreach (var line in configLines)
+                {
+                    if (line.Contains("Extended Side"))
+                    {
+                        if (line.Contains("Both")) return "Both";
+                        if (line.Contains("Right")) return "Right";
+                        if (line.Contains("Left")) return "Left";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                StaticLogger.LogError($"Failed to read WiderShipMod config: {ex.Message}");
+            }
+            return "Both"; // default to Both if config is missing
         }
     }
 }
