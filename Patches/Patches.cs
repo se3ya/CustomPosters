@@ -135,7 +135,7 @@ namespace CustomPosters
 
             var originalMaterial = originalRenderer.material;
 
-            // default poster positions
+            // Default poster positions
             var posterData = new (Vector3 position, Vector3 rotation, Vector3 scale, string name)[]
             {
         (new Vector3(4.1886f, 2.9318f, -16.8409f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"),
@@ -146,6 +146,7 @@ namespace CustomPosters
         (new Vector3(3.0647f, 2.8174f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
             };
 
+            // Adjust poster positions based on WiderShipMod's Extended Side
             if (Plugin.IsWiderShipModInstalled)
             {
                 Logger.LogInfo($"Adjusting poster positions for WiderShipMod Extended Side: {Plugin.WiderShipExtendedSide}");
@@ -153,40 +154,114 @@ namespace CustomPosters
                 switch (Plugin.WiderShipExtendedSide)
                 {
                     case "Both":
-                        // reposition posters for Both extended side
-                        posterData[0] = (new Vector3(4.6877f, 2.9407f, -19.62f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"); // Poster1
-                        posterData[3] = (new Vector3(8.4715f, 2.8652f, -10.826f), new Vector3(0, 0.026f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"); // Poster4
-                        posterData[4] = (new Vector3(5.3602f, 2.5882f, -18.3793f), new Vector3(0, 118.0114f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"); // Poster5
-                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.7253f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips"); // CustomTips
+                        posterData[0] = (new Vector3(4.6877f, 2.9407f, -19.62f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                        posterData[3] = (new Vector3(8.4715f, 2.8652f, -10.826f), new Vector3(0, 0.026f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                        posterData[4] = (new Vector3(5.3602f, 2.5882f, -18.3793f), new Vector3(0, 118.0114f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.7253f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                         break;
 
                     case "Right":
-                        // adjust positions for Right
-                        posterData[0] = (new Vector3(4.2224f, 2.9318f, -16.8609f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"); // Poster1
-                        posterData[1] = (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2"); // Poster2
-                        posterData[2] = (new Vector3(9.9426f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3"); // Poster3
-                        posterData[3] = (new Vector3(7.3425f, 2.9452f, -10.826f), new Vector3(0, 0.026f, 2.6456f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"); // Poster4
-                        posterData[4] = (new Vector3(5.5386f, 2.5882f, -17.3641f), new Vector3(0, 200.9099f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"); // Poster5
-                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.733f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips"); // CustomTips
+                        posterData[0] = (new Vector3(4.2224f, 2.9318f, -16.8609f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                        posterData[1] = (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
+                        posterData[2] = (new Vector3(9.9426f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
+                        posterData[3] = (new Vector3(7.3425f, 2.9452f, -10.826f), new Vector3(0, 0.026f, 2.6456f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                        posterData[4] = (new Vector3(5.5386f, 2.5882f, -17.3641f), new Vector3(0, 200.9099f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.733f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                         break;
 
                     case "Left":
-                        // adjust positions for Left
-                        posterData[0] = (new Vector3(4.6777f, 2.9007f, -19.63f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"); // Poster1
-                        posterData[2] = (new Vector3(9.7197f, 2.8151f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3"); // Poster3
-                        posterData[3] = (new Vector3(7.3025f, 2.8652f, -10.826f), new Vector3(0, 0.026f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"); // Poster4
-                        posterData[4] = (new Vector3(5.3602f, 2.5482f, -18.3793f), new Vector3(0, 118.0114f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"); // Poster5
-                        posterData[5] = (new Vector3(2.8647f, 2.7774f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips"); // CustomTips
+                        posterData[0] = (new Vector3(4.6777f, 2.9007f, -19.63f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                        posterData[2] = (new Vector3(9.7197f, 2.8151f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
+                        posterData[3] = (new Vector3(7.3025f, 2.8652f, -10.826f), new Vector3(0, 0.026f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                        posterData[4] = (new Vector3(5.3602f, 2.5482f, -18.3793f), new Vector3(0, 118.0114f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(2.8647f, 2.7774f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                         break;
                 }
             }
 
+            // Reposition posters based on 2 Story Ship Mod compatibility
+            if (Plugin.Is2StoryShipModInstalled)
+            {
+                if (Plugin.IsShipWindowsInstalled)
+                {
+                    // If ShipWindows and 2 Story Mod are detected, ignore both configs and use specific positions
+                    Logger.LogInfo("ShipWindows and 2 Story Ship Mod detected. Ignoring both configs and repositioning posters.");
+                    posterData[0] = (new Vector3(6.5923f, 2.9318f, -17.4766f), new Vector3(0, 179.2201f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                    posterData[1] = (new Vector3(9.0884f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
+                    posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                    posterData[4] = (new Vector3(10.2813f, 2.7482f, -8.8271f), new Vector3(0, 0.9014f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                    posterData[5] = (new Vector3(2.5679f, 2.6763f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                }
+                if (Plugin.IsShipWindowsInstalled && Plugin.IsWiderShipModInstalled)
+                {
+                    // If ShipWindows and WiderShipMod are detected, ignore 2 Story Mod config
+                    Logger.LogInfo("ShipWindows and WiderShipMod detected with 2 Story Ship Mod. Using default 2 Story Ship Mod positions.");
+                    posterData[0] = (new Vector3(6.5923f, 2.9318f, -22.4766f), new Vector3(0, 179.2201f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                    posterData[1] = (new Vector3(9.0884f, 2.4776f, -5.8265f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
+                    posterData[2] = (new Vector3(10.1364f, 2.8591f, -22.4788f), new Vector3(0, 0, 0), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
+                    posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                    posterData[4] = (new Vector3(7.8577f, 2.7482f, -22.4803f), new Vector3(0, 179.7961f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                    posterData[5] = (new Vector3(-5.8111f, 2.541f, -17.577f), new Vector3(0, 270.0942f, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                }
+                else if (Plugin.IsWiderShipModInstalled)
+                {
+                    // If WiderShipMod is detected with 2 Story Mod, use specific positions
+                    Logger.LogInfo("WiderShipMod detected with 2 Story Ship Mod. Using WiderShipMod-compatible positions.");
+                    posterData[0] = (new Vector3(6.3172f, 2.9407f, -22.4766f), new Vector3(0, 180f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                    posterData[1] = (new Vector3(9.5975f, 2.5063f, -5.8245f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
+                    posterData[2] = (new Vector3(10.1364f, 2.8591f, -22.4788f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
+                    posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                    posterData[4] = (new Vector3(7.5475f, 2.5882f, -22.4803f), new Vector3(0, 180f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                    posterData[5] = (new Vector3(-5.8111f, 2.541f, -17.577f), new Vector3(0, 270.0942f, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                }
+                else
+                {
+                    // If only 2 Story Mod is detected, use its config
+                    Logger.LogInfo("2 Story Ship Mod detected. Repositioning posters based on window settings.");
+
+                    // If all windows are enabled (default behavior)
+                    if (Plugin.EnableRightWindows && Plugin.EnableLeftWindows)
+                    {
+                        Logger.LogInfo("All windows are enabled. Repositioning posters to default 2 Story Ship Mod positions.");
+                        posterData[0] = (new Vector3(6.5923f, 2.9318f, -17.4766f), new Vector3(0, 179.2201f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                        posterData[1] = (new Vector3(9.0884f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
+                        posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                        posterData[4] = (new Vector3(10.2813f, 2.7482f, -8.8271f), new Vector3(0, 179.7961f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(2.5679f, 2.6763f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                    }
+                    else
+                    {
+                        // Reposition posters if right windows are disabled
+                        if (!Plugin.EnableRightWindows)
+                        {
+                            Logger.LogInfo("Right windows are disabled. Repositioning Poster1 and Poster5.");
+                            posterData[0] = (new Vector3(4.0286f, 2.9318f, -16.7774f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                            posterData[1] = (new Vector3(9.0884f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
+                            posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 0), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                            posterData[4] = (new Vector3(5.3282f, 2.7482f, -17.2754f), new Vector3(0, 202.3357f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                            posterData[5] = (new Vector3(2.5679f, 2.6763f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                        }
+
+                        // Reposition posters if left windows are disabled
+                        if (!Plugin.EnableLeftWindows)
+                        {
+                            Logger.LogInfo("Left windows are disabled. Repositioning Poster1 and Poster4.");
+                            posterData[0] = (new Vector3(9.8324f, 2.9318f, -8.8257f), new Vector3(0, 0, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
+                            posterData[1] = (new Vector3(7.3648f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
+                            posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
+                            posterData[4] = (new Vector3(6.4959f, 2.7482f, -17.4807f), new Vector3(0, 180f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                            posterData[5] = (new Vector3(2.5679f, 2.6763f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                        }
+                    }
+                }
+            }
+
             // reposition Poster4 if ShipWindows is installed and window2 is enabled but only if WiderShipMod is not installed
-            if (Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled && !Plugin.IsWiderShipModInstalled)
+            if (Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled && !Plugin.Is2StoryShipModInstalled)
             {
                 Logger.LogInfo("ShipWindows compatibility: Repositioning Poster4 due to window2 being enabled.");
-                posterData[3].position = new Vector3(6.3616f, 3.3081f, -10.8221f); // New position
-                posterData[3].rotation = new Vector3(0, 0, 1.4166f); // New rotation
+                posterData[3].position = new Vector3(8.4543f, 2.931f, -10.8221f); // New position
+                posterData[3].rotation = new Vector3(0, 0, 358.0874f); // New rotation
                 posterData[3].scale = new Vector3(0.7289f, 0.9989f, 1f); // New scale
             }
 
