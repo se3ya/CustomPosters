@@ -25,6 +25,7 @@
 - Randomization Options:
   - *Poster Randomizer*: Randomly select one pack for all posters or mix textures from multiple packs.
 - Compatible with **ShipWindows** and **WiderShipMod**.
+- Incompatibility with **2 sToRy ShIp**.
 
 ---
 
