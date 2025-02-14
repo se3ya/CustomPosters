@@ -49,6 +49,14 @@ _<p><small>Names of the poster image should be exactly like shown in structure</
         │                └── tips/
         │                     └── CustomTips.png
         └── ...                  
+
+### Recommended Poster Sizes *[ In pixels ]*
+- Poster1 - 341 Width, 559 Height
+- Poster2 - 285 Width, 559 Height
+- Poster3 - 274 Width, 243 Height
+- Poster4 - 372 Width, 672 Height
+- Poster5 - 411 Width, 364 Height
+- CustomTips - 1024 Width, 1020 Height
 ---
 
 ## Configuration
