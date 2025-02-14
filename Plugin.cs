@@ -97,12 +97,9 @@ namespace CustomPosters
                     }
                 }
 
-                // Check if 2 Story Ship Mod is installed
-                Is2StoryShipModInstalled = Directory.GetDirectories(Paths.PluginPath)
-                    .Any(folder => folder.Contains("MelanieMelicious-MelanieMelicious_2_sToRy_ShIp__works_w_Wider_Ship_Mod"));
-
-                // Check if 2 Story Ship Mod is installed (ignore .old files)
-                Is2StoryShipModInstalled = CheckIf2StoryShipModInstalled();
+                // Check if 2 Story Ship Mod is installed using Chainloader
+                Is2StoryShipModInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos
+                    .ContainsKey("MelanieMelicious.2StoryShip");
 
                 if (Is2StoryShipModInstalled)
                 {
@@ -110,16 +107,20 @@ namespace CustomPosters
                     Check2StoryShipModConfig(); // Read its config
                 }
 
-                // Check if ShipWindows is installed
-                IsShipWindowsInstalled = CheckIfShipWindowsInstalled();
+                // Check if ShipWindows is installed using Chainloader
+                IsShipWindowsInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos
+                    .ContainsKey("TestAccount666.ShipWindows");
+
                 if (IsShipWindowsInstalled)
                 {
                     StaticLogger.LogInfo("ShipWindows detected.");
                     IsWindow2Enabled = CheckIfWindow2Enabled();
                 }
 
-                // Check if WiderShipMod is installed
-                IsWiderShipModInstalled = CheckIfWiderShipModInstalled();
+                // Check if WiderShipMod is installed using Chainloader
+                IsWiderShipModInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos
+                    .ContainsKey("mborsh.WiderShipMod");
+
                 if (IsWiderShipModInstalled)
                 {
                     StaticLogger.LogInfo("WiderShipMod detected.");
@@ -147,48 +148,6 @@ namespace CustomPosters
         public static readonly List<string> TipFiles = new();
         public static Random Rand = new();
 
-        private static bool CheckIf2StoryShipModInstalled()
-        {
-            foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
-            {
-                if (folder.Contains("MelanieMelicious-MelanieMelicious_2_sToRy_ShIp__works_w_Wider_Ship_Mod"))
-                {
-                    var dllFiles = Directory.GetFiles(folder, "*.dll");
-                    foreach (var dllFile in dllFiles)
-                    {
-                        if (dllFile.EndsWith("Melanie2StoryShip.dll") && !dllFile.EndsWith(".old"))
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Checks if ShipWindows mod is installed (ignores .old files).
-        /// </summary>
-        private static bool CheckIfShipWindowsInstalled()
-        {
-            foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
-            {
-                if (folder.Contains("ShipWindows"))
-                {
-                    // Check if the ShipWindows DLL exists (ignore .old files)
-                    var dllFiles = Directory.GetFiles(folder, "*.dll");
-                    foreach (var dllFile in dllFiles)
-                    {
-                        if (!dllFile.EndsWith(".old"))
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
         /// <summary>
         /// Checks if window2 is enabled in ShipWindows' config.
         /// </summary>
@@ -215,29 +174,6 @@ namespace CustomPosters
             catch (Exception ex)
             {
                 StaticLogger.LogError($"Failed to read ShipWindows config: {ex.Message}");
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Checks if WiderShipMod is installed.
-        /// </summary>
-        private static bool CheckIfWiderShipModInstalled()
-        {
-            foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
-            {
-                if (folder.Contains("mborsh-Wider_Ship_Mod"))
-                {
-                    // Check if the WiderShipMod DLL exists (ignore .old files)
-                    var dllFiles = Directory.GetFiles(folder, "*.dll");
-                    foreach (var dllFile in dllFiles)
-                    {
-                        if (dllFile.EndsWith("WiderShipMod.dll") && !dllFile.EndsWith(".old"))
-                        {
-                            return true;
-                        }
-                    }
-                }
             }
             return false;
         }
