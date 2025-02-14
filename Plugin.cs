@@ -15,15 +15,51 @@ namespace CustomPosters
         public const string PLUGIN_NAME = "CustomPosters";
         public const string PLUGIN_VERSION = "1.0.0";
 
-        // shipWindows config
+        // ShipWindows config
         public static bool IsShipWindowsInstalled { get; private set; }
         public static bool IsWindow2Enabled { get; private set; }
 
-        // widerShipMod config
+        // 2 Story Ship Mod config
+        public static bool Is2StoryShipModInstalled { get; private set; }
+        public static bool EnableRightWindows { get; private set; } = true; // Default to true
+        public static bool EnableLeftWindows { get; private set; } = true;  // Default to true
+
+        // WiderShipMod config
         public static bool IsWiderShipModInstalled { get; private set; }
         public static string WiderShipExtendedSide { get; private set; }
 
+        // Static reference to the logger
         public static ManualLogSource StaticLogger { get; private set; }
+
+        private static void Check2StoryShipModConfig()
+        {
+            try
+            {
+                var configPath = Path.Combine(Paths.ConfigPath, "MelanieMelicious.2StoryShip.cfg");
+                if (!File.Exists(configPath))
+                {
+                    StaticLogger.LogWarning("2 Story Ship Mod config file not found. Using default window settings.");
+                    return;
+                }
+
+                var configLines = File.ReadAllLines(configPath);
+                foreach (var line in configLines)
+                {
+                    if (line.Contains("Enable Right Windows"))
+                    {
+                        EnableRightWindows = line.Contains("true");
+                    }
+                    else if (line.Contains("Enable Left Windows"))
+                    {
+                        EnableLeftWindows = line.Contains("true");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                StaticLogger.LogError($"Failed to read 2 Story Ship Mod config: {ex.Message}");
+            }
+        }
 
         private void Awake()
         {
@@ -61,6 +97,20 @@ namespace CustomPosters
                     }
                 }
 
+                // Check if 2 Story Ship Mod is installed
+                Is2StoryShipModInstalled = Directory.GetDirectories(Paths.PluginPath)
+                    .Any(folder => folder.Contains("MelanieMelicious-MelanieMelicious_2_sToRy_ShIp__works_w_Wider_Ship_Mod"));
+
+                // Check if 2 Story Ship Mod is installed (ignore .old files)
+                Is2StoryShipModInstalled = CheckIf2StoryShipModInstalled();
+
+                if (Is2StoryShipModInstalled)
+                {
+                    StaticLogger.LogInfo("2 Story Ship Mod detected.");
+                    Check2StoryShipModConfig(); // Read its config
+                }
+
+                // Check if ShipWindows is installed
                 IsShipWindowsInstalled = CheckIfShipWindowsInstalled();
                 if (IsShipWindowsInstalled)
                 {
@@ -68,6 +118,7 @@ namespace CustomPosters
                     IsWindow2Enabled = CheckIfWindow2Enabled();
                 }
 
+                // Check if WiderShipMod is installed
                 IsWiderShipModInstalled = CheckIfWiderShipModInstalled();
                 if (IsWiderShipModInstalled)
                 {
@@ -76,6 +127,7 @@ namespace CustomPosters
                     StaticLogger.LogInfo($"WiderShipMod Extended Side: {WiderShipExtendedSide}");
                 }
 
+                // Initialize config and patches
                 PosterConfig.Init(Logger);
                 CustomPosters.Patches.Init(Logger);
 
@@ -95,6 +147,28 @@ namespace CustomPosters
         public static readonly List<string> TipFiles = new();
         public static Random Rand = new();
 
+        private static bool CheckIf2StoryShipModInstalled()
+        {
+            foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
+            {
+                if (folder.Contains("MelanieMelicious-MelanieMelicious_2_sToRy_ShIp__works_w_Wider_Ship_Mod"))
+                {
+                    var dllFiles = Directory.GetFiles(folder, "*.dll");
+                    foreach (var dllFile in dllFiles)
+                    {
+                        if (dllFile.EndsWith("Melanie2StoryShip.dll") && !dllFile.EndsWith(".old"))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Checks if ShipWindows mod is installed (ignores .old files).
+        /// </summary>
         private static bool CheckIfShipWindowsInstalled()
         {
             foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
@@ -115,6 +189,9 @@ namespace CustomPosters
             return false;
         }
 
+        /// <summary>
+        /// Checks if window2 is enabled in ShipWindows' config.
+        /// </summary>
         private static bool CheckIfWindow2Enabled()
         {
             try
@@ -142,6 +219,9 @@ namespace CustomPosters
             return false;
         }
 
+        /// <summary>
+        /// Checks if WiderShipMod is installed.
+        /// </summary>
         private static bool CheckIfWiderShipModInstalled()
         {
             foreach (var folder in Directory.GetDirectories(Paths.PluginPath))
@@ -162,6 +242,9 @@ namespace CustomPosters
             return false;
         }
 
+        /// <summary>
+        /// Reads the Extended Side value from WiderShipMod's config.
+        /// </summary>
         private static string GetWiderShipExtendedSide()
         {
             try
@@ -188,7 +271,7 @@ namespace CustomPosters
             {
                 StaticLogger.LogError($"Failed to read WiderShipMod config: {ex.Message}");
             }
-            return "Both"; // default to Both if config is missing
+            return "Both"; // Default to "Both" if config is missing or invalid
         }
     }
 }
