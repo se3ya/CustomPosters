@@ -93,7 +93,7 @@ Yes! The mod supports multiple poster packs. You can enable or disable packs in 
 Yes, the mod is compatible with **ShipWindows**, **2 sToRy ShIp**, and **WiderShipMod**. Poster positions are automatically adjusted based on the installed mods.
 
 ### **Q: Can I use custom sizes for posters?**
-Yes, but for best results, use the recommended sizes listed in the [Adding Custom Posters](#adding-custom-posterscreating-custom-posters-mod) section.
+Yes, but for best results, use the recommended sizes listed in the [Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#recommended-poster-sizes--in-pixels-) section.
 
 ---
 
@@ -101,7 +101,7 @@ Yes, but for best results, use the recommended sizes listed in the [Adding Custo
 ### My Posters Aren't Showing Up
 1. Ensure your images are named correctly (e.g., `Poster1.png`, `CustomTips.png`).
 2. Check the `BepInEx/LogOutput.log` file for errors related to texture loading.
-3. Make sure the posters and tips folders are in the correct location as shown in *[Adding Custom Posters/Creating Custom Posters Mod](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)*.
+3. Make sure the posters and tips folders are in the correct location as shown in *[Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)*.
 
 ### The Default Poster (Plane.001) is Still Visible
 - This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled, check log file for errors and ensure your images are valid.
