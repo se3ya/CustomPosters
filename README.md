@@ -13,7 +13,7 @@
 1. [Features](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#features)
 2. [Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)
 3. [Configuration](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#configuration)
-4. [FAQ]()
+4. [FAQ](https://github.com/se3ya/CustomPosters/blob/main/README.md#faq)
 5. [Troubleshooting](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#troubleshooting)
 6. [License](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#license)
 7. [Credits](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#credits)
