@@ -3,8 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using BepInEx;
 using BepInEx.Logging;
+using DunGen;
 using HarmonyLib;
 using UnityEngine;
 
@@ -14,10 +16,9 @@ namespace CustomPosters
     {
         private static ManualLogSource Logger { get; set; }
         private static bool _materialsUpdated = false;
-
         private static string _selectedPack = null;
-
         private static Material _copiedMaterial = null;
+        private static readonly List<GameObject> CreatedPosters = new();
 
         public static void Init(ManualLogSource logger)
         {
@@ -29,10 +30,8 @@ namespace CustomPosters
         private static void StartPatch(StartOfRound __instance)
         {
             _materialsUpdated = false;
-
             CopyPlane001Material();
-
-            __instance.StartCoroutine(DelayedUpdateMaterials());
+            __instance.StartCoroutine(DelayedUpdateMaterialsAsync());
         }
 
         [HarmonyPatch(typeof(RoundManager), "GenerateNewLevelClientRpc")]
@@ -41,7 +40,7 @@ namespace CustomPosters
         {
             if (!_materialsUpdated)
             {
-                __instance.StartCoroutine(DelayedUpdateMaterials());
+                __instance.StartCoroutine(DelayedUpdateMaterialsAsync());
             }
         }
 
@@ -51,16 +50,49 @@ namespace CustomPosters
         {
             if (!_materialsUpdated)
             {
-                __instance.StartCoroutine(DelayedUpdateMaterials());
+                __instance.StartCoroutine(DelayedUpdateMaterialsAsync());
             }
         }
 
         [HarmonyPatch(typeof(StartOfRound), "OnClientDisconnect")]
         [HarmonyPostfix]
-        private static void OnClientDisconnectPatch()
+        private static void OnClientDisconnectPatch(ulong clientId)
         {
             _materialsUpdated = false;
-            Logger.LogInfo("Lobby left. Resetting materials update flag.");
+            Logger.LogInfo("Lobby left. Resetting materials.");
+            CleanUpPosters();
+        }
+
+        private static IEnumerator LoadTextureAsync(string filePath, Action<Texture2D> onComplete)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    Logger.LogError($"Texture file not found: {filePath}");
+                    onComplete?.Invoke(null);
+                    yield break;
+                }
+
+                var texture = new Texture2D(2, 2);
+                var fileData = File.ReadAllBytes(filePath);
+
+                if (texture.LoadImage(fileData))
+                {
+                    texture.filterMode = FilterMode.Point;
+                    onComplete?.Invoke(texture);
+                }
+                else
+                {
+                    Logger.LogError($"Failed to load texture from {filePath}");
+                    onComplete?.Invoke(null);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error loading texture from {filePath}: {ex.Message}");
+                onComplete?.Invoke(null);
+            }
         }
 
         private static void CopyPlane001Material()
@@ -99,20 +131,38 @@ namespace CustomPosters
             }
         }
 
-        private static bool CreateCustomPosters()
+        private static void CleanUpPosters()
         {
+            if (CreatedPosters.Count == 0) return;
+
+            Logger.LogInfo("Cleaning up existing posters.");
+            foreach (var poster in CreatedPosters)
+            {
+                if (poster != null)
+                {
+                    UnityEngine.Object.Destroy(poster);
+                }
+            }
+            CreatedPosters.Clear();
+        }
+
+        private static IEnumerator CreateCustomPostersAsync()
+        {
+            // Clean up existing posters before creating new ones
+            CleanUpPosters();
+
             var environment = GameObject.Find("Environment");
             if (environment == null)
             {
                 Logger.LogError("Environment GameObject not found in the scene hierarchy!");
-                return false;
+                yield break;
             }
 
             var hangarShip = environment.transform.Find("HangarShip")?.gameObject;
             if (hangarShip == null)
             {
                 Logger.LogError("HangarShip GameObject not found under Environment!");
-                return false;
+                yield break;
             }
 
             var postersParent = new GameObject("CustomPosters");
@@ -123,14 +173,14 @@ namespace CustomPosters
             if (posterPlane == null)
             {
                 Logger.LogError("Poster plane (Plane.001) not found under HangarShip!");
-                return false;
+                yield break;
             }
 
             var originalRenderer = posterPlane.GetComponent<MeshRenderer>();
             if (originalRenderer == null || originalRenderer.materials.Length == 0)
             {
                 Logger.LogError("Poster plane renderer or materials not found!");
-                return false;
+                yield break;
             }
 
             var originalMaterial = originalRenderer.material;
@@ -271,7 +321,7 @@ namespace CustomPosters
             if (enabledPacks.Count == 0)
             {
                 Logger.LogWarning("No enabled packs found!");
-                return false;
+                yield break;
             }
 
             var enabledPackNames = enabledPacks.Select(pack => Path.GetFileName(Path.GetDirectoryName(pack))).ToList();
@@ -301,16 +351,18 @@ namespace CustomPosters
                 {
                     foreach (var file in Directory.GetFiles(postersPath, "*.png"))
                     {
-                        var result = LoadTextureFromFile(file);
-                        if (result.texture != null)
+                        yield return LoadTextureAsync(file, (texture) =>
                         {
-                            var posterName = Path.GetFileNameWithoutExtension(file);
-                            if (!allTextures.ContainsKey(posterName))
+                            if (texture != null)
                             {
-                                allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
+                                var posterName = Path.GetFileNameWithoutExtension(file);
+                                if (!allTextures.ContainsKey(posterName))
+                                {
+                                    allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
+                                }
+                                allTextures[posterName].Add((texture, file));
                             }
-                            allTextures[posterName].Add(result);
-                        }
+                        });
                     }
                 }
 
@@ -318,16 +370,18 @@ namespace CustomPosters
                 {
                     foreach (var file in Directory.GetFiles(tipsPath, "*.png"))
                     {
-                        var result = LoadTextureFromFile(file);
-                        if (result.texture != null)
+                        yield return LoadTextureAsync(file, (texture) =>
                         {
-                            var posterName = Path.GetFileNameWithoutExtension(file);
-                            if (!allTextures.ContainsKey(posterName))
+                            if (texture != null)
                             {
-                                allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
+                                var posterName = Path.GetFileNameWithoutExtension(file);
+                                if (!allTextures.ContainsKey(posterName))
+                                {
+                                    allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
+                                }
+                                allTextures[posterName].Add((texture, file));
                             }
-                            allTextures[posterName].Add(result);
-                        }
+                        });
                     }
                 }
             }
@@ -335,7 +389,7 @@ namespace CustomPosters
             if (allTextures.Count == 0)
             {
                 Logger.LogWarning("No textures found in enabled packs!");
-                return false;
+                yield break;
             }
 
             bool anyTextureLoaded = false;
@@ -357,26 +411,31 @@ namespace CustomPosters
                     var textureData = textures[Plugin.Rand.Next(textures.Count)];
 
                     var material = new Material(_copiedMaterial);
-
                     material.mainTexture = textureData.texture;
 
                     renderer.material = material;
                     anyTextureLoaded = true;
 
                     Logger.LogInfo($"Loaded texture for {poster.name} from {textureData.filePath}");
+
+                    // Add the poster to the tracking list
+                    CreatedPosters.Add(poster);
                 }
                 else
                 {
                     Logger.LogError($"No textures found for {poster.name}. Disabling the poster.");
                     poster.SetActive(false);
                 }
+
+                // Yield to spread the workload over multiple frames
+                yield return null;
             }
 
             if (!anyTextureLoaded)
             {
                 UnityEngine.Object.Destroy(postersParent);
                 Logger.LogWarning("No custom posters were created due to missing textures.");
-                return false;
+                yield break;
             }
 
             var vanillaPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
@@ -387,44 +446,9 @@ namespace CustomPosters
             }
 
             Logger.LogInfo("Custom posters created successfully.");
-            return true;
         }
 
-        private static string GetGameObjectPath(GameObject obj)
-        {
-            if (obj == null) return "null";
-
-            string path = obj.name;
-            while (obj.transform.parent != null)
-            {
-                obj = obj.transform.parent.gameObject;
-                path = obj.name + "/" + path;
-            }
-            return path;
-        }
-
-        private static (Texture2D texture, string filePath) LoadTextureFromFile(string fullPath)
-        {
-            if (File.Exists(fullPath))
-            {
-                var texture = new Texture2D(2, 2);
-                if (texture.LoadImage(File.ReadAllBytes(fullPath)))
-                {
-                    texture.filterMode = FilterMode.Point;
-                    return (texture, fullPath);
-                }
-                else
-                {
-                    Logger.LogError($"Failed to load texture from {fullPath}");
-                    return (null, null);
-                }
-            }
-
-            Logger.LogError($"Texture file not found: {fullPath}");
-            return (null, null);
-        }
-
-        private static IEnumerator DelayedUpdateMaterials()
+        private static IEnumerator DelayedUpdateMaterialsAsync()
         {
             if (_materialsUpdated)
             {
@@ -443,35 +467,9 @@ namespace CustomPosters
 
             HideVanillaPosterPlane();
 
-            if (!CreateCustomPosters())
-            {
-                Logger.LogWarning("Failed to create custom posters. Re-enabling Plane.001.");
-                ShowVanillaPosterPlane();
-            }
+            yield return CreateCustomPostersAsync();
 
             _materialsUpdated = true;
-        }
-
-        private static void ShowVanillaPosterPlane()
-        {
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
-            if (posterPlane != null)
-            {
-                posterPlane.SetActive(true);
-                Logger.LogInfo("Vanilla poster plane (Plane.001 (Old)) re-enabled.");
-                return;
-            }
-
-            posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-            if (posterPlane != null)
-            {
-                posterPlane.SetActive(true);
-                Logger.LogInfo("Vanilla poster plane (Plane.001) re-enabled.");
-            }
-            else
-            {
-                Logger.LogWarning("Vanilla poster plane (Plane.001) not found!");
-            }
         }
     }
 }
