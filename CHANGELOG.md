@@ -1,3 +1,11 @@
+# CustomPosters *v1.3.3*, *"Optimization"*
+
+- Fixed texture leaking.
+- Optimized CustomPosters creation.
+  - The game no longer freezes when loading posters.
+- Removed unused code.
+- Added error handling for robustness.
+
 # CustomPosters *v1.3.2*, *"Positions"*
 
 - Improved poster positions.
