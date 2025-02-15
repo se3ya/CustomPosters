@@ -6,13 +6,14 @@
 
 ### Table of Contents
 
-1. [Features](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#features)
-2. [Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)
-3. [Configuration](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#configuration)
-4. [FAQ](https://github.com/se3ya/CustomPosters/blob/main/README.md#faq)
-5. [Troubleshooting](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#troubleshooting)
-6. [License](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#license)
-7. [Credits](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#credits)
+1. [Quick Start](https://github.com/se3ya/CustomPosters/tree/main#quick-start)
+2. [Features](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#features)
+3. [Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)
+4. [Configuration](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#configuration)
+5. [FAQ](https://github.com/se3ya/CustomPosters/blob/main/README.md#faq)
+6. [Troubleshooting](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#troubleshooting)
+7. [License](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#license)
+8. [Credits](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#credits)
    
 ---
 
