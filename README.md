@@ -2,9 +2,10 @@
 # CustomPosters
 ### **A mod for Lethal Company that replaces the default posters in the ship with custom posters. You can add your own images to create a personalized experience!**
 
-[![Downloads](https://img.shields.io/github/downloads/se3ya/CustomPosters/total?label=Downloads)](https://thunderstore.io/c/lethal-company/p/seechela/CustomPosters/)
+[![Downloads](https://img.shields.io/github/downloads/se3ya/CustomPosters/total?label=Downloads)](https://thunderstore.io/c/lethal-company/)
 [![License](https://img.shields.io/github/license/se3ya/CustomPosters?label=License)](https://github.com/se3ya/CustomPosters/blob/main/LICENSE)
 [![Support](https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-orange)](https://www.buymeacoffee.com/see_ya)
+
 ---
 
 ### Table of Contents
