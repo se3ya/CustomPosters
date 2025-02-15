@@ -1,3 +1,7 @@
+# CustomPosters *v1.3.2*, *"Positions"*
+
+- Improved poster positions.
+
 # CustomPosters *v1.3.1*, *"Soft Dependency"*
 
 - Made compatibility mods load first and then CustomPosters so it can detect them.
