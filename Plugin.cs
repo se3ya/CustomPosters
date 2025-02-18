@@ -10,13 +10,14 @@ namespace CustomPosters
 {
     [BepInPlugin(Plugin.PLUGIN_GUID, Plugin.PLUGIN_NAME, Plugin.PLUGIN_VERSION)]
     [BepInDependency("TestAccount666.ShipWindows", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("TestAccount666.ShipWindowsBeta", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("MelanieMelicious.2StoryShip", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("mborsh.WiderShipMod", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public const string PLUGIN_GUID = "seeya.customposters";
         public const string PLUGIN_NAME = "CustomPosters";
-        public const string PLUGIN_VERSION = "1.0.0";
+        public const string PLUGIN_VERSION = "1.3.5";
 
         // ShipWindows config
         public static bool IsShipWindowsInstalled { get; private set; }
@@ -110,13 +111,15 @@ namespace CustomPosters
                     Check2StoryShipModConfig(); // Read its config
                 }
 
-                // Check if ShipWindows is installed using Chainloader
+                // Check if ShipWindows or ShipWindowsBeta is installed using Chainloader
                 IsShipWindowsInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos
-                    .ContainsKey("TestAccount666.ShipWindows");
+                    .ContainsKey("TestAccount666.ShipWindows") ||
+                    BepInEx.Bootstrap.Chainloader.PluginInfos
+                    .ContainsKey("TestAccount666.ShipWindowsBeta");
 
                 if (IsShipWindowsInstalled)
                 {
-                    StaticLogger.LogInfo("ShipWindows detected.");
+                    StaticLogger.LogInfo("ShipWindows or ShipWindowsBeta detected.");
                     IsWindow2Enabled = CheckIfWindow2Enabled();
                 }
 
@@ -158,25 +161,54 @@ namespace CustomPosters
         {
             try
             {
+                // Check ShipWindows config
                 var shipWindowsConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
-                if (!File.Exists(shipWindowsConfigPath))
+                if (File.Exists(shipWindowsConfigPath))
                 {
-                    StaticLogger.LogWarning("ShipWindows config file not found. Assuming Window2 is disabled.");
-                    return false;
-                }
-
-                var configLines = File.ReadAllLines(shipWindowsConfigPath);
-                foreach (var line in configLines)
-                {
-                    if (line.Contains("EnableWindow2") && line.Contains("true"))
+                    var configLines = File.ReadAllLines(shipWindowsConfigPath);
+                    foreach (var line in configLines)
                     {
-                        return true;
+                        if (line.Contains("EnableWindow2") && line.Contains("true"))
+                        {
+                            return true;
+                        }
                     }
                 }
+
+                // Check ShipWindowsBeta config
+                var shipWindowsBetaConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindowsBeta.cfg");
+                if (File.Exists(shipWindowsBetaConfigPath))
+                {
+                    var configLines = File.ReadAllLines(shipWindowsBetaConfigPath);
+                    bool isInLeftWindowSection = false;
+
+                    foreach (var line in configLines)
+                    {
+                        // Check if we're in the [Left Window (SideLeft)] section
+                        if (line.Trim().StartsWith("[") && line.Trim().EndsWith("]"))
+                        {
+                            isInLeftWindowSection = line.Trim().Equals("[Left Window (SideLeft)]", StringComparison.OrdinalIgnoreCase);
+                        }
+
+                        // If we're in the [Left Window (SideLeft)] section, check for the "Enabled" key
+                        if (isInLeftWindowSection && line.Trim().StartsWith("1. Enabled", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Extract the value after the equals sign
+                            var parts = line.Split('=');
+                            if (parts.Length > 1 && parts[1].Trim().Equals("true", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                StaticLogger.LogWarning("ShipWindows or ShipWindowsBeta config file not found. Assuming Window 2 is disabled.");
+                return false;
             }
             catch (Exception ex)
             {
-                StaticLogger.LogError($"Failed to read ShipWindows config: {ex.Message}");
+                StaticLogger.LogError($"Failed to read ShipWindows or ShipWindowsBeta config: {ex.Message}");
             }
             return false;
         }
