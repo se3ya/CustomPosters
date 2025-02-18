@@ -307,10 +307,10 @@ namespace CustomPosters
                 }
             }
 
-            // reposition Poster4 if ShipWindows is installed and window2 is enabled but only if WiderShipMod is not installed
+            // reposition Poster4 and Poster2 if ShipWindows is installed and window2 is enabled but only if WiderShipMod is not installed
             if (Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled && !Plugin.IsWiderShipModInstalled && !Plugin.Is2StoryShipModInstalled)
             {
-                Logger.LogInfo("ShipWindows compatibility: Repositioning Poster4 due to window2 being enabled.");
+                Logger.LogInfo("ShipWindows/Beta compatibility: Repositioning Poster4 & Poster2 due to window 2 being enabled.");
                 posterData[3].position = new Vector3(6.4449f, 3.0961f, -10.8221f); // New position
                 posterData[1].position = new Vector3(6.4202f, 2.2577f, -10.8226f); // New position
                 posterData[3].rotation = new Vector3(0, 0, 358.0874f); // New rotation
@@ -454,8 +454,6 @@ namespace CustomPosters
             {
                 yield break;
             }
-
-            yield return new WaitForSeconds(1);
 
             Logger.LogInfo("Updating materials for custom posters");
 
