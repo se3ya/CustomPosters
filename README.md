@@ -35,7 +35,7 @@
   - If you have more than 2 poster mods and first poster don't load, it will try to load second poster instead.
 - Randomization Options:
   - *Poster Randomizer*: Randomly select one pack for all posters or mix textures from multiple packs.
-- Compatible with **ShipWindows**, **2 sToRy ShIp** and **WiderShipMod**.
+- Compatible with **ShipWindows/Beta**, **2 sToRy ShIp** and **WiderShipMod**.
 
 ---
 
