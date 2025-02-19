@@ -1,3 +1,12 @@
+# CustomPosters *v1.3.5*, *"huh?"*
+
+- Removed 1 second delay before creating custom posters.
+  - Was meant to fix something but it didn't do anything...
+
+# CustomPosters *v1.3.4*, *"Compatibility"*
+
+- Temporarily added ShipWindowsBeta compatibility.
+
 # CustomPosters *v1.3.3*, *"Optimization"*
 
 - Fixed texture leaking.
