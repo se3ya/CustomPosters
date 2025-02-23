@@ -36,6 +36,7 @@
 - Randomization Options:
   - *Poster Randomizer*: Randomly select one pack for all posters or mix textures from multiple packs.
 - Compatible with **ShipWindows/Beta**, **2 sToRy ShIp** and **WiderShipMod**.
+- Tool called [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) which allows to crop posters from **LethalPosters** mod to be compatible with **CustomPosters**.
 
 ---
 
