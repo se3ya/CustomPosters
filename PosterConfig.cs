@@ -30,24 +30,22 @@ namespace CustomPosters
 
             foreach (var mod in Plugin.PosterFolders)
             {
-                var startIdx = mod.IndexOf(@"plugins\", StringComparison.Ordinal);
-                if (startIdx == -1)
+                try
                 {
-                    Logger.LogError($"Invalid mod folder path: 'plugins\\' not found in {mod}");
+                    // get the mod folder name skipping if its the plugins directory itself
+                    var modName = Path.GetFileName(Path.GetDirectoryName(mod));
+                    if (string.IsNullOrEmpty(modName) || modName.Equals("plugins", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var conf = configFile.Bind(modName, "Enabled", true, $"Enable or disable {modName}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogDebug($"Failed to parse mod path {mod}: {ex.Message}");
                     continue;
                 }
-                startIdx += @"plugins\".Length;
-
-                var endIdx = mod.IndexOf(@"\CustomPosters", startIdx, StringComparison.Ordinal);
-                if (endIdx == -1)
-                {
-                    Logger.LogError($"Invalid mod folder path: '\\CustomPosters' not found in {mod}");
-                    continue;
-                }
-
-                var result = mod.Substring(startIdx, endIdx - startIdx);
-
-                var conf = configFile.Bind(result, "Enabled", true, $"Enable or disable {result}");
             }
         }
 
@@ -68,7 +66,7 @@ namespace CustomPosters
 
             var packName = folder.Substring(startIdx, endIdx - startIdx);
 
-            // Check if the pack is enabled in the configuration
+            // check if the pack is enabled in the configuration
             return configFile.Bind(packName, "Enabled", true).Value;
         }
     }
