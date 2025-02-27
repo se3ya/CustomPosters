@@ -19,10 +19,57 @@ namespace CustomPosters
         private static string _selectedPack = null;
         private static Material _copiedMaterial = null;
         private static readonly List<GameObject> CreatedPosters = new();
+        private static readonly Dictionary<string, Texture2D> LoadedTextures = new();
+        private static AssetBundle _lethalPostersBundle;
+        private static GameObject _poster5Prefab;
+        private static GameObject _tipsPrefab;
 
         public static void Init(ManualLogSource logger)
         {
             Logger = logger;
+            LoadAssetBundles();
+        }
+
+        private static void LoadAssetBundles()
+        {
+            try
+            {
+                string bundlesPath = Path.Combine(Paths.PluginPath, "CustomPosters", "bundles");
+                string bundleFile = Path.Combine(bundlesPath, "lethalposters");
+                
+                if (!Directory.Exists(bundlesPath))
+                {
+                    Logger.LogError($"Bundles directory not found at: {bundlesPath}");
+                    return;
+                }
+
+                if (!File.Exists(bundleFile))
+                {
+                    Logger.LogError($"Bundle file not found at: {bundleFile}");
+                    return;
+                }
+
+                _lethalPostersBundle = AssetBundle.LoadFromFile(bundleFile);
+
+                if (_lethalPostersBundle != null)
+                {
+                    Logger.LogInfo("Bundle loaded successfully");
+                    
+                    _poster5Prefab = _lethalPostersBundle.LoadAsset<GameObject>("Poster5Prefab");
+                    _tipsPrefab = _lethalPostersBundle.LoadAsset<GameObject>("PosterTipsPrefab");
+                    
+                    if (_poster5Prefab == null) Logger.LogError("Failed to load Poster5Prefab");
+                    if (_tipsPrefab == null) Logger.LogError("Failed to load PosterTips");
+                }
+                else
+                {
+                    Logger.LogError($"Failed to load bundle from: {bundleFile}");
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Failed to load asset bundle: {e.Message}\nStack trace: {e.StackTrace}");
+            }
         }
 
         [HarmonyPatch(typeof(StartOfRound), "Start")]
@@ -97,14 +144,14 @@ namespace CustomPosters
 
         private static void CopyPlane001Material()
         {
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-            if (posterPlane == null)
+            var vanillaPlaneMaterial = GameObject.Find("Environment/HangarShip/Plane.001");
+            if (vanillaPlaneMaterial == null)
             {
                 Logger.LogError("Poster plane (Plane.001) not found under HangarShip!");
                 return;
             }
 
-            var originalRenderer = posterPlane.GetComponent<MeshRenderer>();
+            var originalRenderer = vanillaPlaneMaterial.GetComponent<MeshRenderer>();
             if (originalRenderer == null || originalRenderer.materials.Length == 0)
             {
                 Logger.LogError("Poster plane renderer or materials not found!");
@@ -117,17 +164,17 @@ namespace CustomPosters
 
         private static void HideVanillaPosterPlane()
         {
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
-            if (posterPlane != null)
+            var vanillaPosterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
+            if (vanillaPosterPlane != null)
             {
-                posterPlane.SetActive(false);
+                vanillaPosterPlane.SetActive(false);
                 return;
             }
 
-            posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-            if (posterPlane != null)
+            vanillaPosterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
+            if (vanillaPosterPlane != null)
             {
-                posterPlane.SetActive(false);
+                vanillaPosterPlane.SetActive(false);
             }
         }
 
@@ -144,12 +191,13 @@ namespace CustomPosters
                 }
             }
             CreatedPosters.Clear();
+            LoadedTextures.Clear();
         }
 
         private static IEnumerator CreateCustomPostersAsync()
         {
-            // Clean up existing posters before creating new ones
             CleanUpPosters();
+            LoadedTextures.Clear();
 
             var environment = GameObject.Find("Environment");
             if (environment == null)
@@ -192,8 +240,8 @@ namespace CustomPosters
         (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2"),
         (new Vector3(9.9186f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3"),
         (new Vector3(5.2187f, 2.5963f, -11.0945f), new Vector3(0, 337.5868f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"),
-        (new Vector3(5.5286f, 2.5882f, -17.3541f), new Vector3(0, 201.1556f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"),
-        (new Vector3(3.0647f, 2.8174f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
+        (new Vector3(5.5386f, 2.5882f, -17.3341f), new Vector3(0, 358.9184f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"),
+        (new Vector3(2.8647f, 2.7774f, -11.7541f), new Vector3(359.2899f, 89.687f, 269.7103f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
             };
 
             // Adjust poster positions based on WiderShipMod's Extended Side
@@ -206,8 +254,8 @@ namespace CustomPosters
                     case "Both":
                         posterData[0] = (new Vector3(4.6877f, 2.9407f, -19.62f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                         posterData[3] = (new Vector3(5.5699f, 2.5963f, -10.3268f), new Vector3(0, 62.0324f, 2.6799f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
-                        posterData[4] = (new Vector3(5.3602f, 2.5882f, -18.3793f), new Vector3(0, 118.0114f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
-                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.7253f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                        posterData[4] = (new Vector3(5.3302f, 2.5882f, -18.3793f), new Vector3(0, 277.3203f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.7583f), new Vector3(359.2899f, 89.687f, 269.7103f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                         break;
 
                     case "Right":
@@ -215,8 +263,8 @@ namespace CustomPosters
                         posterData[1] = (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                         posterData[2] = (new Vector3(9.9426f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
                         posterData[3] = (new Vector3(5.5699f, 2.5963f, -10.3268f), new Vector3(0, 62.0324f, 2.6799f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
-                        posterData[4] = (new Vector3(5.5386f, 2.5882f, -17.3641f), new Vector3(0, 200.9099f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
-                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.733f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                        posterData[4] = (new Vector3(5.5386f, 2.5882f, -17.3341f), new Vector3(0, 358.9184f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(3.0947f, 2.8174f, -6.7583f), new Vector3(359.2899f, 89.687f, 269.7103f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                         break;
 
                     case "Left":
@@ -224,8 +272,8 @@ namespace CustomPosters
                         posterData[1] = (new Vector3(6.4202f, 2.2577f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster2");
                         posterData[2] = (new Vector3(9.7197f, 2.8151f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
                         posterData[3] = (new Vector3(6.4449f, 3.0961f, -10.8221f), new Vector3(0, 0.026f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
-                        posterData[4] = (new Vector3(5.3602f, 2.5482f, -18.3793f), new Vector3(0, 118.0114f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
-                        posterData[5] = (new Vector3(2.8647f, 2.7774f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                        posterData[4] = (new Vector3(5.3302f, 2.5482f, -18.3793f), new Vector3(0, 276.3203f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(2.8647f, 2.7774f, -11.7541f), new Vector3(359.2899f, 89.687f, 269.7103f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                         break;
                 }
             }
@@ -251,8 +299,8 @@ namespace CustomPosters
                     posterData[1] = (new Vector3(9.0884f, 2.4776f, -5.8265f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                     posterData[2] = (new Vector3(10.1364f, 2.8591f, -22.4788f), new Vector3(0, 180.3376f, 0), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
                     posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
-                    posterData[4] = (new Vector3(7.8577f, 2.7482f, -22.4803f), new Vector3(0, 179.7961f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
-                    posterData[5] = (new Vector3(-5.8111f, 2.541f, -17.577f), new Vector3(0, 270.0942f, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                    posterData[4] = (new Vector3(7.8577f, 2.7482f, -22.4503f), new Vector3(0, 337.7817f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                    posterData[5] = (new Vector3(-5.7911f, 2.541f, -17.597f), new Vector3(359.2899f, 0.3053f, 269.7103f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                 }
                 else if (Plugin.IsWiderShipModInstalled)
                 {
@@ -277,8 +325,8 @@ namespace CustomPosters
                         posterData[0] = (new Vector3(10.1567f, 2.75f, -8.8293f), new Vector3(0, 0, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                         posterData[1] = (new Vector3(9.0884f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                         posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
-                        posterData[4] = (new Vector3(6.1473f, 2.8195f, -17.4729f), new Vector3(0, 179.7123f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
-                        posterData[5] = (new Vector3(2.5679f, 2.6763f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
+                        posterData[4] = (new Vector3(6.1473f, 2.8195f, -17.4529f), new Vector3(0, 338.821f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
+                        posterData[5] = (new Vector3(2.5679f, 2.6763f, -11.7541f), new Vector3(359.2899f, 89.687f, 269.7103f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                     }
                     else
                     {
@@ -313,14 +361,26 @@ namespace CustomPosters
                 Logger.LogInfo("ShipWindows/Beta compatibility: Repositioning Poster4 & Poster2 due to window 2 being enabled.");
                 posterData[3].position = new Vector3(6.4449f, 3.0961f, -10.8221f); // New position
                 posterData[1].position = new Vector3(6.4202f, 2.2577f, -10.8226f); // New position
+                posterData[5].position = new Vector3(2.5679f, 2.6763f, -11.7541f); // New position
+                posterData[5].rotation = new Vector3(359.2899f, 89.687f, 269.7103f); // New rotation
+                posterData[4].position = new Vector3(5.5286f, 2.5882f, -17.3341f); // New position
+                posterData[4].rotation = new Vector3(0, 359.3425f, 359.8f); // New rotation
                 posterData[3].rotation = new Vector3(0, 0, 358.0874f); // New rotation
                 posterData[3].scale = new Vector3(0.7289f, 0.9989f, 1f); // New scale
             }
 
             var enabledPacks = Plugin.PosterFolders.Where(folder => PosterConfig.IsPackEnabled(folder)).ToList();
+            var vanillaPosterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
+
             if (enabledPacks.Count == 0)
             {
                 Logger.LogWarning("No enabled packs found!");
+                // show vanilla poster if no packs are enabled
+                if (vanillaPosterPlane != null)
+                {
+                    Logger.LogInfo("No packs enabled, showing vanilla Plane.001");
+                    vanillaPosterPlane.SetActive(true);
+                }
                 yield break;
             }
 
@@ -338,7 +398,13 @@ namespace CustomPosters
             else
             {
                 packsToUse = enabledPacks;
-                Logger.LogInfo("PosterRandomizer disabled. Combining all enabled packs.");
+                Logger.LogInfo("Using all enabled packs");
+            }
+
+            // first hide Plane.001 before attempting to load textures
+            if (vanillaPosterPlane != null)
+            {
+                vanillaPosterPlane.SetActive(false);
             }
 
             var allTextures = new Dictionary<string, List<(Texture2D texture, string filePath)>>();
@@ -361,6 +427,10 @@ namespace CustomPosters
                                     allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
                                 }
                                 allTextures[posterName].Add((texture, file));
+                                if (!LoadedTextures.ContainsKey(posterName))
+                                {
+                                    LoadedTextures[posterName] = texture;
+                                }
                             }
                         });
                     }
@@ -380,6 +450,10 @@ namespace CustomPosters
                                     allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
                                 }
                                 allTextures[posterName].Add((texture, file));
+                                if (!LoadedTextures.ContainsKey(posterName))
+                                {
+                                    LoadedTextures[posterName] = texture;
+                                }
                             }
                         });
                     }
@@ -389,6 +463,11 @@ namespace CustomPosters
             if (allTextures.Count == 0)
             {
                 Logger.LogWarning("No textures found in enabled packs!");
+                if (vanillaPosterPlane != null)
+                {
+                    Logger.LogInfo("Showing vanilla Plane.001 due to missing textures");
+                    vanillaPosterPlane.SetActive(true);
+                }
                 yield break;
             }
 
@@ -418,7 +497,6 @@ namespace CustomPosters
 
                     Logger.LogInfo($"Loaded texture for {poster.name} from {textureData.filePath}");
 
-                    // Add the poster to the tracking list
                     CreatedPosters.Add(poster);
                 }
                 else
@@ -427,7 +505,6 @@ namespace CustomPosters
                     poster.SetActive(false);
                 }
 
-                // Yield to spread the workload over multiple frames
                 yield return null;
             }
 
@@ -435,14 +512,19 @@ namespace CustomPosters
             {
                 UnityEngine.Object.Destroy(postersParent);
                 Logger.LogWarning("No custom posters were created due to missing textures.");
+                if (vanillaPosterPlane != null)
+                {
+                    Logger.LogInfo("Showing vanilla Plane.001 due to missing textures");
+                    vanillaPosterPlane.SetActive(true);
+                }
                 yield break;
             }
 
-            var vanillaPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
-            if (vanillaPlane != null)
+            // if we got here, textures loaded successfully, destroy Plane.001
+            if (vanillaPosterPlane != null)
             {
-                Logger.LogInfo("Destroying vanilla Plane.001.");
-                UnityEngine.Object.Destroy(vanillaPlane);
+                Logger.LogInfo("Textures loaded successfully, destroying vanilla Plane.001");
+                UnityEngine.Object.Destroy(vanillaPosterPlane);
             }
 
             Logger.LogInfo("Custom posters created successfully.");
@@ -457,17 +539,116 @@ namespace CustomPosters
 
             Logger.LogInfo("Updating materials for custom posters");
 
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-            if (posterPlane != null)
+            // Find and hide the vanilla plane
+            var vanillaPlaneMaterials = GameObject.Find("Environment/HangarShip/Plane.001");
+            if (vanillaPlaneMaterials != null)
             {
-                posterPlane.SetActive(false);
+                vanillaPlaneMaterials.SetActive(false);
             }
 
             HideVanillaPosterPlane();
 
             yield return CreateCustomPostersAsync();
 
+            ReplacePosters();
+
             _materialsUpdated = true;
+        }
+
+        private static void ReplacePosters()
+        {
+            try
+            {
+                if (_copiedMaterial == null)
+                {
+                    Logger.LogError("Copied material is null! Make sure CopyPlane001Material was called.");
+                    return;
+                }
+
+                GameObject poster5 = GameObject.Find("Poster5");
+                if (poster5 != null && _poster5Prefab != null)
+                {
+                    Vector3 originalPosition = poster5.transform.position;
+                    Quaternion originalRotation = poster5.transform.rotation;
+                    Transform originalParent = poster5.transform.parent;
+
+                    GameObject.Destroy(poster5);
+
+                    GameObject newPoster = GameObject.Instantiate(_poster5Prefab, originalPosition, originalRotation);
+                    newPoster.transform.parent = originalParent;
+                    
+                    var meshColliders = newPoster.GetComponentsInChildren<MeshCollider>();
+                    foreach (var collider in meshColliders)
+                    {
+                        GameObject.Destroy(collider);
+                    }
+                    
+                    var renderer = newPoster.GetComponent<MeshRenderer>();
+                    if (renderer != null)
+                    {
+                        Material newMaterial = new Material(_copiedMaterial);
+                        
+                        if (LoadedTextures.TryGetValue("Poster5", out var texture))
+                        {
+                            newMaterial.mainTexture = texture;
+                            Logger.LogInfo("Applied previously loaded Poster5 texture");
+                        }
+                        else
+                        {
+                            Logger.LogError("Poster5 texture not found in loaded textures!");
+                        }
+                        
+                        renderer.material = newMaterial;
+                    }
+                    
+                    CreatedPosters.Add(newPoster);
+                    Logger.LogInfo("Successfully replaced Poster5 at original position");
+                }
+
+                GameObject tips = GameObject.Find("CustomTips");
+                if (tips != null && _tipsPrefab != null)
+                {
+                    Vector3 originalPosition = tips.transform.position;
+                    Quaternion originalRotation = tips.transform.rotation;
+                    Transform originalParent = tips.transform.parent;
+
+                    GameObject.Destroy(tips);
+
+                    GameObject newPoster = GameObject.Instantiate(_tipsPrefab, originalPosition, originalRotation);
+                    newPoster.transform.parent = originalParent;
+                    
+                    var meshColliders = newPoster.GetComponentsInChildren<MeshCollider>();
+                    foreach (var collider in meshColliders)
+                    {
+                        GameObject.Destroy(collider);
+                    }
+                    
+                    var renderer = newPoster.GetComponent<MeshRenderer>();
+                    if (renderer != null)
+                    {
+                        Material newMaterial = new Material(_copiedMaterial);
+                        
+                        if (LoadedTextures.TryGetValue("CustomTips", out var texture))
+                        {
+                            newMaterial.mainTexture = texture;
+                            Logger.LogInfo("Applied previously loaded CustomTips texture");
+                        }
+                        else
+                        {
+                            Logger.LogError("CustomTips texture not found in loaded textures!");
+                        }
+                        
+                        renderer.material = newMaterial;
+                    }
+                    
+                    CreatedPosters.Add(newPoster);
+                    Logger.LogInfo("Successfully replaced CustomTips at original position");
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogError($"Failed to replace posters: {e.Message}\nStack trace: {e.StackTrace}");
+            }
         }
     }
 }
