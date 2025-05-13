@@ -36,7 +36,9 @@
 - Randomization Options:
   - *Poster Randomizer*: Randomly select one pack for all posters or mix textures from multiple packs.
 - Compatible with **ShipWindows/Beta**, **2 sToRy ShIp** and **WiderShipMod**.
+- Optimized to prevent texture leaking.
 - Tool called [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) which allows to crop posters from **LethalPosters** mod to be compatible with **CustomPosters**.
+  - **Sizes of the posters might be slightly be incorrect after cropping!**
 
 ---
 
@@ -44,7 +46,6 @@
 ### Requirements
 - CustomPosters
 - Supported formats - .png
-- Lethal Company (obviously).
 ### Steps
 This is how your mod folder structure should look like to work with CustomPosters:
 _<p><small>Names of the poster image should be exactly like shown in structure</small></p>_
@@ -63,12 +64,12 @@ _<p><small>Names of the poster image should be exactly like shown in structure</
         └── ...                  
 
 ### Recommended Poster Sizes *[ In pixels ]*
-- Poster1 - 341 Width, 559 Height
-- Poster2 - 285 Width, 559 Height
-- Poster3 - 274 Width, 243 Height
-- Poster4 - 372 Width, 672 Height
-- Poster5 - 411 Width, 364 Height
-- CustomTips - 1024 Width, 1020 Height
+- Poster1 - 639 Width, 488 Height
+- Poster2 - 730 Width, 490 Height
+- Poster3 - 749 Width, 1054 Height
+- Poster4 - 729 Width, 999 Height
+- Poster5 - 552 Width, 769 Height
+- CustomTips - 860 Width, 1219 Height
 ---
 
 ## Configuration
