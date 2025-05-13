@@ -42,7 +42,7 @@ namespace CustomPosters
                 var configPath = Path.Combine(Paths.ConfigPath, "MelanieMelicious.2StoryShip.cfg");
                 if (!File.Exists(configPath))
                 {
-                    StaticLogger.LogWarning("2 Story Ship Mod config file not found. Using default window settings.");
+                    StaticLogger.LogWarning("2 StoryShipMod config file not found. Using default window settings.");
                     return;
                 }
 
@@ -61,7 +61,7 @@ namespace CustomPosters
             }
             catch (Exception ex)
             {
-                StaticLogger.LogError($"Failed to read 2 Story Ship Mod config: {ex.Message}");
+                StaticLogger.LogError($"Failed to read 2 StoryShipMod config: {ex.Message}");
             }
         }
 
@@ -73,10 +73,10 @@ namespace CustomPosters
 
                 try
                 {
-                    // search for CustomPosters directories excluding the plugins directory itself
+                    // Search for CustomPosters directories excluding the plugins directory itself
                     PosterFolders = Directory.GetDirectories(Paths.PluginPath, "*", SearchOption.AllDirectories)
-                        .Where(dir => dir.EndsWith(Plugin.PLUGIN_NAME, StringComparison.OrdinalIgnoreCase) && 
-                                    !dir.Equals(Paths.PluginPath, StringComparison.OrdinalIgnoreCase))
+                        .Where(dir => dir.EndsWith(Plugin.PLUGIN_NAME, StringComparison.OrdinalIgnoreCase) &&
+                                      !dir.Equals(Paths.PluginPath, StringComparison.OrdinalIgnoreCase))
                         .ToList();
 
                     if (PosterFolders.Count == 0)
@@ -134,7 +134,7 @@ namespace CustomPosters
                         IsWindow2Enabled = CheckIfWindow2Enabled();
                     }
 
-                    // Check if WiderShipMod is installed using Chainloader
+                    // Check if WiderShipMod is installed
                     IsWiderShipModInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos
                         .ContainsKey("mborsh.WiderShipMod");
 
@@ -170,69 +170,69 @@ namespace CustomPosters
         public static Random Rand = new();
 
         /// <summary>
-        /// Checks if window2 is enabled in ShipWindows' config.
+        /// Checks if window2 (Right Window in ShipWindowsBeta) is enabled in ShipWindows' config.
         /// </summary>
         private static bool CheckIfWindow2Enabled()
         {
             try
             {
-                // Check ShipWindows config if it's installed
-                if (IsShipWindowsInstalled)
-                {
-                    var shipWindowsConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
-                    if (File.Exists(shipWindowsConfigPath))
-                    {
-                        StaticLogger.LogInfo("Found ShipWindows config file");
-                        var configLines = File.ReadAllLines(shipWindowsConfigPath);
-                        foreach (var line in configLines)
-                        {
-                            if (line.Contains("EnableWindow2") && line.Contains("true"))
-                            {
-                                return true;
-                            }
-                        }
-                        StaticLogger.LogInfo("Window 2 is disabled in ShipWindows config");
-                    }
-                    else
-                    {
-                        StaticLogger.LogWarning("ShipWindows is installed but config file not found at: " + shipWindowsConfigPath);
-                    }
-                }
-
-                // Check ShipWindowsBeta config if it's installed
+                var betaInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("TestAccount666.ShipWindowsBeta");
                 var shipWindowsBetaConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindowsBeta.cfg");
-                if (File.Exists(shipWindowsBetaConfigPath))
+
+                if (betaInstalled && File.Exists(shipWindowsBetaConfigPath))
                 {
-                    StaticLogger.LogInfo("Found ShipWindowsBeta config file");
+                    StaticLogger.LogInfo("Found ShipWindowsBeta cfg");
                     var configLines = File.ReadAllLines(shipWindowsBetaConfigPath);
-                    bool leftWindowEnabled = false;
+                    bool inRightWindowSection = false;
 
                     foreach (var line in configLines)
                     {
-                        if (line.Contains("[Left Window (SideLeft)]"))
+                        var trimmedLine = line.Trim();
+                        if (trimmedLine.StartsWith("[Right Window (SideRight)]"))
                         {
-                            for (int i = 0; i < 5 && i < configLines.Length; i++)
-                            {
-                                var setting = configLines[i];
-                                if (setting.Contains("1. Enabled") && setting.Contains("true"))
-                                {
-                                    leftWindowEnabled = true;
-                                    break;
-                                }
-                            }
-                            break;
+                            inRightWindowSection = true;
+                            continue;
+                        }
+                        if (inRightWindowSection && trimmedLine.StartsWith("[") && !trimmedLine.StartsWith("[Right Window (SideRight)]"))
+                        {
+                            inRightWindowSection = false;
+                            continue;
+                        }
+                        if (inRightWindowSection && trimmedLine.Contains("1. Enabled") && trimmedLine.Contains("true"))
+                        {
+                            StaticLogger.LogInfo("ShipWindowsBeta - Right Window is enabled");
+                            return true;
                         }
                     }
-
-                    StaticLogger.LogInfo($"ShipWindowsBeta - Left Window is {(leftWindowEnabled ? "enabled" : "disabled")}");
-                    return leftWindowEnabled;
+                    StaticLogger.LogInfo("ShipWindowsBeta - Right Window is disabled");
+                    return false;
                 }
 
+                var regularInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("TestAccount666.ShipWindows");
+                var shipWindowsConfigPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
+
+                if (regularInstalled && File.Exists(shipWindowsConfigPath))
+                {
+                    StaticLogger.LogInfo("Found ShipWindows config file");
+                    var configLines = File.ReadAllLines(shipWindowsConfigPath);
+                    foreach (var line in configLines)
+                    {
+                        if (line.Contains("EnableWindow2") && line.Contains("true"))
+                        {
+                            StaticLogger.LogInfo("ShipWindows Window 2 is enabled");
+                            return true;
+                        }
+                    }
+                    StaticLogger.LogInfo("ShipWindows Window 2 is disabled");
+                    return false;
+                }
+
+                StaticLogger.LogWarning("ShipWindows is installed but no relevant config file found.");
                 return false;
             }
             catch (Exception ex)
             {
-                StaticLogger.LogError($"Error checking window2 config: {ex.Message}");
+                StaticLogger.LogError($"Error checking Window2 config: {ex.Message}");
                 return false;
             }
         }
@@ -266,7 +266,7 @@ namespace CustomPosters
             {
                 StaticLogger.LogError($"Failed to read WiderShipMod config: {ex.Message}");
             }
-            return "Both"; // Default to "Both" if config is missing or invalid
+            return "Both";
         }
     }
 }
