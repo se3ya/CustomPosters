@@ -32,7 +32,6 @@ namespace CustomPosters
             {
                 try
                 {
-                    // get the mod folder name skipping if its the plugins directory itself
                     var modName = Path.GetFileName(Path.GetDirectoryName(mod));
                     if (string.IsNullOrEmpty(modName) || modName.Equals("plugins", StringComparison.OrdinalIgnoreCase))
                     {
@@ -66,7 +65,6 @@ namespace CustomPosters
 
             var packName = folder.Substring(startIdx, endIdx - startIdx);
 
-            // check if the pack is enabled in the configuration
             return configFile.Bind(packName, "Enabled", true).Value;
         }
     }
