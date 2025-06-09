@@ -22,20 +22,18 @@
 1. Download and install [GaleModManager](https://thunderstore.io/c/lethal-company/p/Kesomannen/GaleModManager/).
 2. Download the latest version of **CustomPosters** from [Thunderstore](https://thunderstore.io/c/lethal-company/p/seechela/CustomPosters/).
 3. Add your custom posters to the `posters` and `tips` folders as described in the [Adding Custom Posters](#adding-custom-posterscreating-custom-posters-mod) section.
-4. Launch the game and enjoy your custom posters!
+4. Configure poster packs and probabilities in the `CustomPosters.cfg` file (optional).
+5. Launch the game and enjoy your custom posters!
 
 ---
 
 ## Features
 
 - Override the default posters in the ship with your own custom images.
-- Simply drop your images into the `posters` and `tips` folders.
-- Adding multiple poster mods that are compatible with this mod will __work__, as said in *Randomization Options*.
+- Support for multiple poster packs, with the ability to enable/disable poster packs or posters itself, change chances of the packs and posters via configuration.
 - If any custom poster fails to load, the mod will disable that poster at all.
   - If you have more than 2 poster mods and first poster don't load, it will try to load second poster instead.
-- Randomization Options:
-  - *Poster Randomizer*: Randomly select one pack for all posters or mix textures from multiple packs.
-- Compatible with **ShipWindows/Beta**, **2 sToRy ShIp** and **WiderShipMod**.
+- Compatible with **ShipWindows**, **2 sToRy ShIp** and **WiderShipMod**.
 - Optimized to prevent texture leaking.
 - Tool called [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) which allows to crop posters from **LethalPosters** mod to be compatible with **CustomPosters**.
   - **Sizes of the posters might be slightly be incorrect after cropping!**
@@ -45,10 +43,13 @@
 ## Adding Custom Posters
 ### Requirements
 - CustomPosters
-- Supported formats - .png
+- Supported formats - `.png`, `.jpg`, `.jpeg`, `.bmp`.
 ### Steps
-This is how your mod folder structure should look like to work with CustomPosters:
-_<p><small>Names of the poster image should be exactly like shown in structure</small></p>_
+1. Create a folder structure for your custom poster pack in the `BepInEx/plugins` directory as shown below.
+2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly (e.g., `Poster1.png`, `CustomTips.jpg`).
+
+**Folder Structure**:
+_<p><small>Poster image names must match the structure below.</small></p>_
 
 
 
@@ -73,16 +74,27 @@ _<p><small>Names of the poster image should be exactly like shown in structure</
 ---
 
 ## Configuration
-The mod automatically generates a configuration file (`CustomPosters.cfg`) in the `BepInEx/config` folder. You can use this file to customize the behavior of the mod
+The mod automatically generates a configuration file (`CustomPosters.cfg`) in the `BepInEx/config` folder. You can use this file to customize the behavior of the mod.
 
 ### Configuration Options
 
-**PosterRandomizer**:
-- *Enabled (Default)*: Randomly select one pack and use it for all posters.
-- *Disabled*: Randomly select a pack for each poster individually.
-  
-**Enable/Disable Packs**:
-- Each pack has an `Enabled` setting in the configuration file. Set it to true or false to enable or disable the pack.
+- **Randomier mode**:
+  - *PerPack (default)*: Selects one pack randomly for all posters.
+  - *PerPoster*: Randomizes textures for each poster from all enabled packs.
+- **Per session**:
+  - *False (default)*: Randomizes posters only when the lobby reloads.
+  - *True*: Randomized posters only when restarting the game.
+- **Enable/Disable Packs and Posters**:
+  - Each poster pack has an `Enabled` setting for poster pack and posters. Set to `false` to disable a pack or a poster.
+- **Per-Pack Chance**:
+  - Assign a `Chance` value (0–100) for each pack. If any pack has a `Chance > 0`, weighted random selection is used.
+  - A `Chance = 0` excludes the pack from selection, reverting to equal probability among enabled packs with non-zero chances.
+- **Per-Poster Chance**:
+  - For each poster in a pack, set a probability (0–100). If any poster has a `Chance > 0`, weighted selection applies.
+  - Having 2 and more poster packs and one of the poster pack has (e.g. Poster2) `Chance = 70` and second poster pack with same poster has `Chance = 0` means that second poster pack poster is excluded from selection within that pack.
+- **TextureCaching**:
+  - *Enabled (Default)*: Stores textures in memory for faster access, reducing disk reads.
+  - *Disabled*: Loads textures from disk each time, which may slightly increase load times (based on image size).
 
 ---
 
@@ -97,6 +109,9 @@ Yes, the mod is compatible with **ShipWindows**, **2 sToRy ShIp**, and **WiderSh
 ### **Q: Can I use custom sizes for posters?**
 Yes, but for best results, use the recommended sizes listed in the [Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#recommended-poster-sizes--in-pixels-) section.
 
+### **Q: What happens if a poster fails to load?**
+The mod disables that poster and falls back to the vanilla poster or another valid poster from an enabled pack.
+
 ---
 
 ## Troubleshooting
@@ -104,8 +119,9 @@ Yes, but for best results, use the recommended sizes listed in the [Adding Custo
 1. Ensure your images are named correctly (e.g., `Poster1.png`, `CustomTips.png`).
 2. Check the `BepInEx/LogOutput.log` file for errors related to texture loading.
 3. Make sure the posters and tips folders are in the correct location as shown in *[Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)*.
+4. Confirm images are in supported formats (`.png`, `.jpg`, `.jpeg`, `.bmp`) and not corrupted.
 
-### The Default Poster (Plane.001) is Still Visible
+### Default Poster (Plane.001) is Still Visible
 - This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled, check log file for errors and ensure your images are valid.
 
 ---
