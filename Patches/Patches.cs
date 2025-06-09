@@ -3,23 +3,29 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 
 namespace CustomPosters
 {
-    internal class Patches
+    internal class Patches : MonoBehaviour
     {
-        private static ManualLogSource Logger { get; set; }
         private static bool _materialsUpdated = false;
         private static string _selectedPack = null;
         private static Material _copiedMaterial = null;
-        private static readonly List<GameObject> CreatedPosters = new();
+        private static readonly List<GameObject> CreatedPosters = new List<GameObject>();
+        private static int _sessionMapSeed = 0;
+        private static bool _isNewLobby = true;
+        private static bool _sessionSeedInitialized = false;
 
-        public static void Init(ManualLogSource logger)
+
+        [HarmonyPatch(typeof(GameNetworkManager), "Start")]
+        [HarmonyPostfix]
+        private static void GameNetworkManagerStartPatch()
         {
-            Logger = logger;
+            _sessionSeedInitialized = false;
+            _sessionMapSeed = 0;
+            Plugin.Log.LogDebug("Reset session seed initialization");
         }
 
         [HarmonyPatch(typeof(StartOfRound), "Start")]
@@ -28,67 +34,85 @@ namespace CustomPosters
         {
             _materialsUpdated = false;
             CopyPlane001Material();
-            __instance.StartCoroutine(DelayedUpdateMaterialsAsync());
-        }
-
-        [HarmonyPatch(typeof(RoundManager), "GenerateNewLevelClientRpc")]
-        [HarmonyPostfix]
-        private static void GenerateNewLevelClientRpcPatch(int randomSeed, StartOfRound __instance)
-        {
-            if (!_materialsUpdated)
+            if (_isNewLobby)
             {
-                __instance.StartCoroutine(DelayedUpdateMaterialsAsync());
-            }
-        }
+                if (!_sessionSeedInitialized)
+                {
+                    _sessionMapSeed = PosterConfig.PerSession.Value ? StartOfRound.Instance.randomMapSeed : Environment.TickCount;
+                    _sessionSeedInitialized = true;
+                    Plugin.Log.LogDebug($"Initialized session with map seed: {_sessionMapSeed}");
+                }
 
-        [HarmonyPatch(typeof(StartOfRound), "OnShipLandedMiscEvents")]
-        [HarmonyPostfix]
-        private static void OnShipLandedMiscEventsPatch(StartOfRound __instance)
-        {
-            if (!_materialsUpdated)
+                int seedToUse;
+                if (PosterConfig.PerSession.Value)
+                {
+                    seedToUse = _sessionMapSeed;
+                }
+                else
+                {
+                    seedToUse = Environment.TickCount;
+                    _selectedPack = null;
+                }
+
+                Plugin.Service.SetRandomSeed(seedToUse);
+            }
+
+            if (__instance.inShipPhase)
             {
-                __instance.StartCoroutine(DelayedUpdateMaterialsAsync());
+                __instance.StartCoroutine(DelayedUpdateMaterialsAsync(__instance));
             }
+            _isNewLobby = false;
         }
 
-        [HarmonyPatch(typeof(StartOfRound), "OnClientDisconnect")]
+        [HarmonyPatch(typeof(GameNetworkManager), "StartHost")]
         [HarmonyPostfix]
-        private static void OnClientDisconnectPatch(ulong clientId)
+        private static void StartHostPatch()
         {
-            _materialsUpdated = false;
-            Logger.LogInfo("Resetting materials.");
-            CleanUpPosters();
+            _isNewLobby = true;
         }
 
-        private static IEnumerator LoadTextureAsync(string filePath, Action<Texture2D> onComplete)
+        [HarmonyPatch(typeof(GameNetworkManager), "JoinLobby")]
+        [HarmonyPostfix]
+        private static void JoinLobbyPatch()
+        {
+            _isNewLobby = true;
+        }
+
+        private static IEnumerator LoadTextureAsync(string filePath, Action<(Texture2D texture, string filePath)> onComplete)
         {
             try
             {
                 if (!File.Exists(filePath))
                 {
-                    Logger.LogError($"Texture file not found: {filePath}");
-                    onComplete?.Invoke(null);
+                    Plugin.Log.LogError($"File not found: {filePath}");
+                    onComplete?.Invoke((null, null));
                     yield break;
                 }
 
-                var texture = new Texture2D(2, 2);
-                var fileData = File.ReadAllBytes(filePath);
+                var cachedTexture = Plugin.Service.GetCachedTexture(filePath);
+                if (cachedTexture != null)
+                {
+                    onComplete?.Invoke((cachedTexture, filePath));
+                    yield break;
+                }
 
-                if (texture.LoadImage(fileData))
+                var fileData = File.ReadAllBytes(filePath);
+                var texture = new Texture2D(2, 2);
+                if (!texture.LoadImage(fileData))
                 {
-                    texture.filterMode = FilterMode.Point;
-                    onComplete?.Invoke(texture);
+                    Plugin.Log.LogError($"Failed to load texture from {filePath}");
+                    onComplete?.Invoke((null, null));
+                    yield break;
                 }
-                else
-                {
-                    Logger.LogError($"Failed to load texture from {filePath}");
-                    onComplete?.Invoke(null);
-                }
+
+                texture.filterMode = FilterMode.Point;
+                Plugin.Service.CacheTexture(filePath, texture);
+                onComplete?.Invoke((texture, filePath));
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Error loading texture from {filePath}: {ex.Message}");
-                onComplete?.Invoke(null);
+                Plugin.Log.LogError($"Error loading file {filePath}: {ex.Message}");
+                onComplete?.Invoke((null, null));
             }
         }
 
@@ -97,19 +121,18 @@ namespace CustomPosters
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
             if (posterPlane == null)
             {
-                Logger.LogError("Poster plane (Plane.001) not found under HangarShip!");
+                Plugin.Log.LogError("Poster plane Plane.001 not found under HangarShip");
                 return;
             }
 
             var originalRenderer = posterPlane.GetComponent<MeshRenderer>();
             if (originalRenderer == null || originalRenderer.materials.Length == 0)
             {
-                Logger.LogError("Poster plane renderer or materials not found!");
+                Plugin.Log.LogError("Poster plane renderer or materials not found");
                 return;
             }
 
             _copiedMaterial = new Material(originalRenderer.material);
-            Logger.LogInfo("Copied material from Plane.001.");
         }
 
         private static void HideVanillaPosterPlane()
@@ -130,17 +153,46 @@ namespace CustomPosters
 
         private static void CleanUpPosters()
         {
-            if (CreatedPosters.Count == 0) return;
-
-            Logger.LogInfo("Cleaning up existing posters.");
             foreach (var poster in CreatedPosters)
             {
                 if (poster != null)
                 {
+                    var renderer = poster.GetComponent<PosterRenderer>();
+                    if (renderer != null) UnityEngine.Object.Destroy(renderer);
                     UnityEngine.Object.Destroy(poster);
                 }
             }
             CreatedPosters.Clear();
+        }
+
+        private static GameObject CreatePoster()
+        {
+            var newPoster = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            if (newPoster == null)
+            {
+                Plugin.Log.LogError("Failed to create new poster GameObject");
+            }
+            return newPoster;
+        }
+
+        private class PosterRenderer : MonoBehaviour
+        {
+            public void Initialize(Texture2D texture, Material materialTemplate)
+            {
+                var renderer = GetComponent<MeshRenderer>();
+                var material = new Material(materialTemplate);
+
+                if (texture != null)
+                {
+                    material.mainTexture = texture;
+                    renderer.material = material;
+                }
+                else
+                {
+                    Plugin.Log.LogError("No texture provided for poster");
+                    Destroy(gameObject);
+                }
+            }
         }
 
         private static IEnumerator CreateCustomPostersAsync()
@@ -150,14 +202,14 @@ namespace CustomPosters
             var environment = GameObject.Find("Environment");
             if (environment == null)
             {
-                Logger.LogError("Environment GameObject not found in the scene hierarchy!");
+                Plugin.Log.LogError("Environment GameObject not found in the scene hierarchy");
                 yield break;
             }
 
             var hangarShip = environment.transform.Find("HangarShip")?.gameObject;
             if (hangarShip == null)
             {
-                Logger.LogError("HangarShip GameObject not found under Environment!");
+                Plugin.Log.LogError("HangarShip GameObject not found under Environment");
                 yield break;
             }
 
@@ -168,42 +220,39 @@ namespace CustomPosters
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
             if (posterPlane == null)
             {
-                Logger.LogError("Poster (Plane.001) not found under HangarShip!");
+                Plugin.Log.LogError("Poster [Plane.001] not found under HangarShip");
                 yield break;
             }
 
             var originalRenderer = posterPlane.GetComponent<MeshRenderer>();
             if (originalRenderer == null || originalRenderer.materials.Length == 0)
             {
-                Logger.LogError("Poster plane renderer or materials not found!");
+                Plugin.Log.LogError("Poster plane renderer or materials not found");
                 yield break;
             }
 
-            var originalMaterial = originalRenderer.material;
-
-            // Default poster positions
             var posterData = new (Vector3 position, Vector3 rotation, Vector3 scale, string name)[]
             {
-                (new Vector3(4.1886f, 2.9318f, -16.8409f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"),
-                (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2"),
-                (new Vector3(9.9186f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3"),
-                (new Vector3(5.2187f, 2.5963f, -11.0945f), new Vector3(0, 337.5868f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"),
-                (new Vector3(5.5286f, 2.5882f, -17.3541f), new Vector3(0, 201.1556f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"),
-                (new Vector3(3.0647f, 2.8174f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
+        (new Vector3(4.1886f, 2.9318f, -16.8409f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1"),
+        (new Vector3(6.4202f, 2.4776f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2"),
+        (new Vector3(9.9186f, 2.8591f, -17.4716f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3"),
+        (new Vector3(5.2187f, 2.5963f, -11.0945f), new Vector3(0, 337.5868f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4"),
+        (new Vector3(5.5286f, 2.5882f, -17.3541f), new Vector3(0, 201.1556f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5"),
+        (new Vector3(3.0647f, 2.8174f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips")
             };
 
             // Adjust poster positions based on ShipWindows or ShipWindowsBeta
-            if (Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled)
+            if (Plugin.Service.IsShipWindowsInstalled && Plugin.Service.IsWindow2Enabled)
             {
-                Logger.LogInfo("ShipWindows/Beta: Repositioning Poster2 and Poster4 due to Right Window enabled.");
+                Plugin.Log.LogInfo("Repositioning posters due to ShipWindows Right Window enabled");
                 posterData[1] = (new Vector3(6.4202f, 2.2577f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                 posterData[3] = (new Vector3(6.4449f, 3.0961f, -10.8221f), new Vector3(0, 0.026f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
             }
 
             // Adjust poster positions for ShipWindows/Beta Right Window and WiderShipMod Extended Side Left
-            if (Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled && Plugin.IsWiderShipModInstalled && Plugin.WiderShipExtendedSide == "Left")
+            if (Plugin.Service.IsShipWindowsInstalled && Plugin.Service.IsWindow2Enabled && Plugin.Service.IsWiderShipModInstalled && Plugin.Service.WiderShipExtendedSide == "Left")
             {
-                Logger.LogInfo("ShipWindows/Beta Left Window and WiderShipMod Extended Side Left detected, Repositioning Poster2 and Poster4.");
+                Plugin.Log.LogInfo("Repositioning posters due to ShipWindows Left Window, Right Window and WiderShipMod Extended Side Left enabled");
                 posterData[1] = (new Vector3(6.4202f, 2.2577f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                 posterData[3] = (new Vector3(6.4449f, 3.0961f, -10.8221f), new Vector3(0, 0.026f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
                 posterData[0] = (new Vector3(4.6777f, 2.9007f, -19.63f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
@@ -213,11 +262,11 @@ namespace CustomPosters
             }
 
             // Adjust poster positions based on WiderShipMod's Extended Side
-            if (Plugin.IsWiderShipModInstalled)
+            if (Plugin.Service.IsWiderShipModInstalled)
             {
-                Logger.LogInfo($"Adjusting poster positions for WiderShipMod Extended Side: {Plugin.WiderShipExtendedSide}");
+                Plugin.Log.LogInfo($"Repositioning posters due to WiderShipMod Extended Side: {Plugin.Service.WiderShipExtendedSide}");
 
-                switch (Plugin.WiderShipExtendedSide)
+                switch (Plugin.Service.WiderShipExtendedSide)
                 {
                     case "Both":
                         posterData[0] = (new Vector3(4.6877f, 2.9407f, -19.62f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
@@ -236,7 +285,7 @@ namespace CustomPosters
                         break;
 
                     case "Left":
-                        if (!(Plugin.IsShipWindowsInstalled && Plugin.IsWindow2Enabled))
+                        if (!(Plugin.Service.IsShipWindowsInstalled && Plugin.Service.IsWindow2Enabled))
                         {
                             posterData[0] = (new Vector3(4.6777f, 2.9007f, -19.63f), new Vector3(0, 118.2274f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                             posterData[1] = (new Vector3(6.4202f, 2.2577f, -10.8226f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4882f, 2f), "Poster2");
@@ -250,22 +299,22 @@ namespace CustomPosters
             }
 
             // Reposition posters based on 2 Story Ship Mod compatibility
-            if (Plugin.Is2StoryShipModInstalled)
+            if (Plugin.Service.Is2StoryShipModInstalled)
             {
-                if (Plugin.IsShipWindowsInstalled)
+                if (Plugin.Service.IsShipWindowsInstalled)
                 {
                     // If ShipWindows and 2 Story Mod are detected, ignore both configs and use specific positions
-                    Logger.LogInfo("ShipWindows and 2 Story Ship Mod detected. Ignoring both configs and repositioning posters.");
+                    Plugin.Log.LogInfo("Repositioning posters due to ShipWindows and 2 Story Ship Mod detected");
                     posterData[0] = (new Vector3(6.5923f, 2.9318f, -17.4766f), new Vector3(0, 179.2201f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                     posterData[1] = (new Vector3(9.0884f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                     posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
                     posterData[4] = (new Vector3(10.2813f, 2.7482f, -8.8271f), new Vector3(0, 0.9014f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
                     posterData[5] = (new Vector3(2.5679f, 2.6763f, -11.7341f), new Vector3(0, 0, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                 }
-                if (Plugin.IsShipWindowsInstalled && Plugin.IsWiderShipModInstalled)
+                if (Plugin.Service.IsShipWindowsInstalled && Plugin.Service.IsWiderShipModInstalled)
                 {
                     // If ShipWindows and WiderShipMod are detected, ignore 2 Story Mod config
-                    Logger.LogInfo("ShipWindows and WiderShipMod detected with 2 Story Ship Mod. Using default 2 Story Ship Mod positions.");
+                    Plugin.Log.LogInfo("Repositioning posters due to ShipWindows and WiderShipMod detected with 2 Story Ship Mod");
                     posterData[0] = (new Vector3(6.5923f, 2.9318f, -22.4766f), new Vector3(0, 179.2201f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                     posterData[1] = (new Vector3(9.0884f, 2.4776f, -5.8265f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                     posterData[2] = (new Vector3(10.1364f, 2.8591f, -22.4788f), new Vector3(0, 180.3376f, 0), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
@@ -273,10 +322,10 @@ namespace CustomPosters
                     posterData[4] = (new Vector3(7.8577f, 2.7482f, -22.4803f), new Vector3(0, 179.7961f, 359.8f), new Vector3(0.5516f, 0.769f, 1f), "Poster5");
                     posterData[5] = (new Vector3(-5.8111f, 2.541f, -17.577f), new Vector3(0, 270.0942f, 358.6752f), new Vector3(0.8596f, 1.2194f, 1f), "CustomTips");
                 }
-                else if (Plugin.IsWiderShipModInstalled)
+                else if (Plugin.Service.IsWiderShipModInstalled)
                 {
                     // If WiderShipMod is detected with 2 Story Mod, use specific positions
-                    Logger.LogInfo("WiderShipMod detected with 2 Story Ship Mod. Using WiderShipMod-compatible positions.");
+                    Plugin.Log.LogInfo("Repositioning posters due to WiderShipMod detected with 2 Story Ship Mod");
                     posterData[0] = (new Vector3(6.3172f, 2.9407f, -22.4766f), new Vector3(0, 180f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                     posterData[1] = (new Vector3(9.5975f, 2.5063f, -5.8245f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                     posterData[2] = (new Vector3(10.1364f, 2.8591f, -22.4788f), new Vector3(0, 180f, 356.3345f), new Vector3(0.7487f, 1.0539f, 1f), "Poster3");
@@ -287,12 +336,12 @@ namespace CustomPosters
                 else
                 {
                     // If only 2 Story Mod is detected, use its config
-                    Logger.LogInfo("2 Story Ship Mod detected. Repositioning posters based on window settings.");
+                    Plugin.Log.LogInfo("Repositioning posters due to 2 Story Ship Mod detected");
 
                     // If all windows are enabled (default behavior)
-                    if (Plugin.EnableRightWindows && Plugin.EnableLeftWindows)
+                    if (Plugin.Service.EnableRightWindows && Plugin.Service.EnableLeftWindows)
                     {
-                        Logger.LogInfo("All windows are enabled. Repositioning posters to default 2 Story Ship Mod positions.");
+                        Plugin.Log.LogInfo("Repositioning posters due to 2 Story Ship Mod Left and Right windows enabled");
                         posterData[0] = (new Vector3(10.1567f, 2.75f, -8.8293f), new Vector3(0, 0, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                         posterData[1] = (new Vector3(9.0884f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                         posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
@@ -302,9 +351,9 @@ namespace CustomPosters
                     else
                     {
                         // Reposition posters if right windows are disabled
-                        if (!Plugin.EnableRightWindows)
+                        if (!Plugin.Service.EnableRightWindows)
                         {
-                            Logger.LogInfo("Right windows are disabled. Repositioning posters.");
+                            Plugin.Log.LogInfo("Repositioning posters due to 2 Story Ship Mod Right window disabled");
                             posterData[0] = (new Vector3(4.0286f, 2.9318f, -16.7774f), new Vector3(0, 200.9872f, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                             posterData[1] = (new Vector3(9.0884f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                             posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 0), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
@@ -313,9 +362,9 @@ namespace CustomPosters
                         }
 
                         // Reposition posters if left windows are disabled
-                        if (!Plugin.EnableLeftWindows)
+                        if (!Plugin.Service.EnableLeftWindows)
                         {
-                            Logger.LogInfo("Left windows are disabled. Repositioning posters.");
+                            Plugin.Log.LogInfo("Repositioning posters due to 2 Story Ship Mod Left window disabled");
                             posterData[0] = (new Vector3(9.8324f, 2.9318f, -8.8257f), new Vector3(0, 0, 0), new Vector3(0.6391f, 0.4882f, 2f), "Poster1");
                             posterData[1] = (new Vector3(7.3648f, 2.4776f, -8.8229f), new Vector3(0, 0, 0), new Vector3(0.7296f, 0.4896f, 1f), "Poster2");
                             posterData[3] = (new Vector3(5.3599f, 2.5963f, -9.455f), new Vector3(0, 307.2657f, 2.68f), new Vector3(0.7289f, 0.9989f, 1f), "Poster4");
@@ -326,86 +375,177 @@ namespace CustomPosters
                 }
             }
 
-            var enabledPacks = Plugin.PosterFolders.Where(folder => PosterConfig.IsPackEnabled(folder)).ToList();
+            var enabledPacks = Plugin.Service.PosterFolders.Where(folder => PosterConfig.IsPackEnabled(folder)).ToList();
             if (enabledPacks.Count == 0)
             {
-                Logger.LogWarning("No enabled packs found!");
+                Plugin.Log.LogWarning("No enabled packs found");
+                if (posterPlane != null)
+                {
+                    posterPlane.SetActive(true);
+                }
                 yield break;
             }
 
-            var enabledPackNames = enabledPacks.Select(pack => Path.GetFileName(Path.GetDirectoryName(pack))).ToList();
-            Logger.LogInfo($"Enabled poster packs: {string.Join(", ", enabledPackNames)}");
+            var enabledPackNames = enabledPacks.Select(pack => Path.GetFileName(pack)).ToList();
 
             List<string> packsToUse;
-            if (PosterConfig.PosterRandomizer.Value)
+            if (PosterConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
             {
-                _selectedPack = enabledPacks[Plugin.Rand.Next(enabledPacks.Count)];
+                if (!PosterConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
+                {
+                    var packChances = enabledPacks.Select(p => PosterConfig.GetPackChance(p)).ToList();
+                    if (packChances.Any(c => c > 0))
+                    {
+                        var totalChance = packChances.Sum();
+                        var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
+                        double cumulative = 0;
+                        for (int i = 0; i < enabledPacks.Count; i++)
+                        {
+                            cumulative += packChances[i];
+                            if (randomValue <= cumulative)
+                            {
+                                _selectedPack = enabledPacks[i];
+                                break;
+                            }
+                        }
+                        _selectedPack ??= enabledPacks[0];
+                    }
+                    else
+                    {
+                        _selectedPack = enabledPacks[Plugin.Service.Rand.Next(enabledPacks.Count)];
+                    }
+                    var selectedPackName = Path.GetFileName(_selectedPack);
+                    Plugin.Log.LogInfo($"PerPack randomization enabled. Using pack: {selectedPackName} [Chances: {string.Join(", ", packChances)}]");
+                }
                 packsToUse = new List<string> { _selectedPack };
-                var selectedPackName = Path.GetFileName(Path.GetDirectoryName(_selectedPack));
-                Logger.LogInfo($"PosterRandomizer enabled. Using pack: {selectedPackName}");
             }
             else
             {
+                if (!PosterConfig.PerSession.Value)
+                {
+                    _selectedPack = null;
+                }
                 packsToUse = enabledPacks;
-                Logger.LogInfo("PosterRandomizer disabled. Combining all enabled packs.");
+                Plugin.Log.LogInfo("PerPoster - true, combining enabled packs");
             }
 
             var allTextures = new Dictionary<string, List<(Texture2D texture, string filePath)>>();
             foreach (var pack in packsToUse)
             {
+                string packName = Path.GetFileName(pack);
                 string postersPath = Path.Combine(pack, "posters");
                 string tipsPath = Path.Combine(pack, "tips");
+                string nestedPostersPath = Path.Combine(pack, "CustomPosters", "posters");
+                string nestedTipsPath = Path.Combine(pack, "CustomPosters", "tips");
 
-                if (Directory.Exists(postersPath))
+                var filesToLoad = new List<string>();
+                var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp" };
+
+                var pathsToCheck = new[] { postersPath, tipsPath, nestedPostersPath, nestedTipsPath }
+                    .Where(p => Directory.Exists(p))
+                    .Select(p => Path.GetFullPath(p).Replace('\\', '/'))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                foreach (var path in pathsToCheck)
                 {
-                    foreach (var file in Directory.GetFiles(postersPath, "*.png"))
-                    {
-                        yield return LoadTextureAsync(file, (texture) =>
-                        {
-                            if (texture != null)
-                            {
-                                var posterName = Path.GetFileNameWithoutExtension(file);
-                                if (!allTextures.ContainsKey(posterName))
-                                {
-                                    allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
-                                }
-                                allTextures[posterName].Add((texture, file));
-                            }
-                        });
-                    }
+                    var files = Directory.GetFiles(path)
+                        .Where(f => validExtensions.Contains(Path.GetExtension(f).ToLower()) && PosterConfig.IsFileEnabled(f))
+                        .Select(f => Path.GetFullPath(f).Replace('\\', '/'))
+                        .ToList();
+
+                    filesToLoad.AddRange(files);
                 }
 
-                if (Directory.Exists(tipsPath))
+                filesToLoad = filesToLoad.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+                const int batchSize = 5;
+                for (int i = 0; i < filesToLoad.Count; i += batchSize)
                 {
-                    foreach (var file in Directory.GetFiles(tipsPath, "*.png"))
+                    var batch = filesToLoad.Skip(i).Take(batchSize).ToList();
+                    foreach (var file in batch)
                     {
-                        yield return LoadTextureAsync(file, (texture) =>
+                        yield return LoadTextureAsync(file, (result) =>
                         {
-                            if (texture != null)
+                            if (result.texture != null)
                             {
-                                var posterName = Path.GetFileNameWithoutExtension(file);
+                                var posterName = Path.GetFileNameWithoutExtension(file).ToLower();
                                 if (!allTextures.ContainsKey(posterName))
                                 {
-                                    allTextures[posterName] = new List<(Texture2D texture, string filePath)>();
+                                    allTextures[posterName] = new List<(Texture2D, string)>();
                                 }
-                                allTextures[posterName].Add((texture, file));
+                                allTextures[posterName].Add((result.texture, file));
+                            }
+                            else
+                            {
+                                Plugin.Log.LogWarning($"Failed to load texture from {file}");
                             }
                         });
                     }
+                    yield return null;
+                }
+            }
+
+            var prioritizedTextures = new Dictionary<string, (Texture2D texture, string filePath)>();
+            foreach (var kvp in allTextures)
+            {
+                if (kvp.Value.Count > 1)
+                {
+                    var fileChances = kvp.Value.Select(t => PosterConfig.GetFileChance(t.filePath)).ToList();
+                    if (fileChances.Any(c => c > 0))
+                    {
+                        var totalChance = fileChances.Sum();
+                        var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
+                        double cumulative = 0;
+                        for (int i = 0; i < kvp.Value.Count; i++)
+                        {
+                            cumulative += fileChances[i];
+                            if (randomValue <= cumulative)
+                            {
+                                prioritizedTextures[kvp.Key] = kvp.Value[i];
+                                break;
+                            }
+                        }
+                        if (!prioritizedTextures.ContainsKey(kvp.Key))
+                        {
+                            prioritizedTextures[kvp.Key] = kvp.Value[0];
+                        }
+                        var selectedFile = Path.GetFileName(prioritizedTextures[kvp.Key].filePath);
+                        var otherFiles = kvp.Value.Where(t => t.filePath != prioritizedTextures[kvp.Key].filePath).Select(t => Path.GetFileName(t.filePath));
+                    }
+                    else
+                    {
+                        var selected = kvp.Value.OrderBy(t => Plugin.Service.GetFilePriority(t.filePath)).First();
+                        prioritizedTextures[kvp.Key] = selected;
+                        var otherFiles = kvp.Value.Where(t => t.filePath != selected.filePath).Select(t => Path.GetFileName(t.filePath));
+                    }
+                }
+                else
+                {
+                    prioritizedTextures[kvp.Key] = kvp.Value[0];
                 }
             }
 
             if (allTextures.Count == 0)
             {
-                Logger.LogWarning("No textures found in enabled packs!");
+                Plugin.Log.LogWarning("No textures found in enabled packs");
+                if (posterPlane != null)
+                {
+                    posterPlane.SetActive(true);
+                }
                 yield break;
             }
 
-            bool anyTextureLoaded = false;
+
+            bool anyPosterLoaded = false;
 
             for (int i = 0; i < posterData.Length; i++)
             {
-                var poster = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                var poster = CreatePoster();
+                if (poster == null)
+                {
+                    continue;
+                }
                 poster.name = posterData[i].name;
                 poster.transform.SetParent(postersParent.transform);
 
@@ -413,57 +553,53 @@ namespace CustomPosters
                 poster.transform.rotation = Quaternion.Euler(posterData[i].rotation);
                 poster.transform.localScale = posterData[i].scale;
 
-                var renderer = poster.GetComponent<MeshRenderer>();
-
-                if (allTextures.TryGetValue(poster.name, out var textures) && textures.Count > 0)
+                var posterKey = posterData[i].name.ToLower();
+                if (prioritizedTextures.ContainsKey(posterKey) && PosterConfig.IsFileEnabled(prioritizedTextures[posterKey].filePath))
                 {
-                    var textureData = textures[Plugin.Rand.Next(textures.Count)];
+                    var renderer = poster.AddComponent<PosterRenderer>();
+                    renderer.Initialize(prioritizedTextures[posterKey].texture, _copiedMaterial);
 
-                    var material = new Material(_copiedMaterial);
-                    material.mainTexture = textureData.texture;
-
-                    renderer.material = material;
-                    anyTextureLoaded = true;
-
-                    Logger.LogInfo($"Loaded texture for {poster.name} from {textureData.filePath}");
-
+                    Plugin.Log.LogDebug($"Loaded poster {posterData[i].name} from {prioritizedTextures[posterKey].filePath}");
                     CreatedPosters.Add(poster);
+                    anyPosterLoaded = true;
                 }
                 else
                 {
-                    Logger.LogError($"No textures found for {poster.name}. Disabling the poster.");
-                    poster.SetActive(false);
+                    Plugin.Log.LogWarning($"No enabled texture found for {posterData[i].name}. Destroying the poster");
+                    UnityEngine.Object.Destroy(poster);
                 }
-
-                // Yield to spread the workload over multiple frames
                 yield return null;
             }
 
-            if (!anyTextureLoaded)
+            if (anyPosterLoaded)
             {
-                UnityEngine.Object.Destroy(postersParent);
-                Logger.LogWarning("No custom posters were created due to missing textures.");
-                yield break;
+                if (posterPlane != null)
+                {
+                    UnityEngine.Object.Destroy(posterPlane);
+                }
+                var vanillaPlane = hangarShip.transform.Find("Plane")?.gameObject;
+                if (vanillaPlane != null)
+                {
+                    UnityEngine.Object.Destroy(vanillaPlane);
+                }
+                Plugin.Log.LogInfo("Custom posters created successfully");
             }
-
-            var vanillaPlane = hangarShip.transform.Find("Plane.001")?.gameObject;
-            if (vanillaPlane != null)
+            else
             {
-                Logger.LogInfo("Destroying vanilla Plane.001.");
-                UnityEngine.Object.Destroy(vanillaPlane);
+                if (posterPlane != null)
+                {
+                    posterPlane.SetActive(true);
+                    Plugin.Log.LogWarning("Re-enabled vanilla Plane.001 poster due to no custom posters loaded");
+                }
             }
-
-            Logger.LogInfo("Custom posters created successfully.");
         }
 
-        private static IEnumerator DelayedUpdateMaterialsAsync()
+        private static IEnumerator DelayedUpdateMaterialsAsync(StartOfRound instance)
         {
             if (_materialsUpdated)
-            {
                 yield break;
-            }
 
-            Logger.LogInfo("Updating materials for custom posters");
+            yield return new WaitForEndOfFrame();
 
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
             if (posterPlane != null)
@@ -472,10 +608,41 @@ namespace CustomPosters
             }
 
             HideVanillaPosterPlane();
-
-            yield return CreateCustomPostersAsync();
-
+            yield return instance.StartCoroutine(CreateCustomPostersAsync());
             _materialsUpdated = true;
+        }
+        public static void ChangePosterPack(string packName)
+        {
+            if (string.IsNullOrEmpty(packName))
+            {
+                var enabledPacks = Plugin.Service.GetEnabledPackNames();
+                if (enabledPacks.Count == 0) return;
+
+                int currentIndex = enabledPacks.FindIndex(p => p.Equals(_selectedPack, StringComparison.OrdinalIgnoreCase));
+                _selectedPack = enabledPacks[(currentIndex + 1) % enabledPacks.Count];
+            }
+            else
+            {
+                if (Plugin.Service.GetEnabledPackNames().Contains(packName, StringComparer.OrdinalIgnoreCase))
+                {
+                    _selectedPack = packName;
+                }
+                else
+                {
+                    Plugin.Log.LogWarning($"Attempted to select invalid pack: {packName}");
+                    return;
+                }
+            }
+
+            Plugin.Service.SetRandomSeed(Environment.TickCount);
+            Plugin.Log.LogInfo($"Changed poster pack to - {_selectedPack}");
+
+            _materialsUpdated = false;
+            StartOfRound instance = FindObjectOfType<StartOfRound>();
+            if (instance != null && instance.inShipPhase)
+            {
+                instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
+            }
         }
     }
 }
