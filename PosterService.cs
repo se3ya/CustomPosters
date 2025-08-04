@@ -11,7 +11,8 @@ namespace CustomPosters
     {
         private readonly List<string> _posterFolders = new List<string>();
         private readonly Dictionary<string, Texture2D> _textureCache = new Dictionary<string, Texture2D>();
-        private readonly string[] _validExtensions = { ".png", ".jpg", ".jpeg", ".bmp" };
+        private readonly Dictionary<string, string> _videoCache = new Dictionary<string, string>(); // Cache video file paths
+        private readonly string[] _validExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
         private System.Random _rand;
         public IReadOnlyList<string> PosterFolders => _posterFolders.AsReadOnly();
 
@@ -293,7 +294,12 @@ namespace CustomPosters
         public Texture2D GetCachedTexture(string filePath)
         {
             if (!PosterConfig.EnableTextureCaching.Value) return null;
-            return _textureCache.TryGetValue(filePath, out var texture) ? texture : null;
+            if (_textureCache.TryGetValue(filePath, out var texture))
+            {
+                Plugin.Log.LogDebug($"Retrieved cached texture: {filePath}");
+                return texture;
+            }
+            return null;
         }
 
         public void CacheTexture(string filePath, Texture2D texture)
@@ -302,6 +308,33 @@ namespace CustomPosters
             if (!_textureCache.ContainsKey(filePath))
             {
                 _textureCache[filePath] = texture;
+                Plugin.Log.LogDebug($"Cached texture: {filePath}");
+            }
+        }
+
+        public string GetCachedVideo(string filePath)
+        {
+            if (!PosterConfig.EnableTextureCaching.Value) return null;
+            if (_videoCache.TryGetValue(filePath, out var videoPath))
+            {
+                Plugin.Log.LogDebug($"Retrieved cached video: {filePath}");
+                return videoPath;
+            }
+            return null;
+        }
+
+        public void CacheVideo(string filePath)
+        {
+            if (!PosterConfig.EnableTextureCaching.Value) return;
+            if (!_videoCache.ContainsKey(filePath))
+            {
+                if (!File.Exists(filePath))
+                {
+                    Plugin.Log.LogError($"Cannot cache video, file does not exist: {filePath}");
+                    return;
+                }
+                _videoCache[filePath] = filePath;
+                Plugin.Log.LogDebug($"Cached video: {filePath}");
             }
         }
 
@@ -315,15 +348,17 @@ namespace CustomPosters
                 }
             }
             _textureCache.Clear();
+            _videoCache.Clear();
+            Plugin.Log.LogInfo("Cleared texture and video cache");
         }
 
         public List<string> GetEnabledPackNames()
         {
             var enabledPacks = PosterFolders
-                .Where(f => PosterConfig.IsPackEnabled(f))
-                .Select(f => Path.GetFullPath(f).Replace('\\', '/'))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            .Where(f => PosterConfig.IsPackEnabled(f))
+            .Select(f => Path.GetFullPath(f).Replace('\\', '/'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
             var packNames = enabledPacks.Select(Path.GetFileName).ToList();
             Plugin.Log.LogDebug($"Enabled pack names: {string.Join(", ", packNames)}");
@@ -339,6 +374,7 @@ namespace CustomPosters
                 ".jpg" => 2,
                 ".jpeg" => 3,
                 ".bmp" => 4,
+                ".mp4" => 5,
                 _ => int.MaxValue
             };
             return basePriority * 1000 + Rand.Next(0, 1000);

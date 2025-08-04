@@ -22,8 +22,18 @@ namespace CustomPosters
         public static ConfigEntry<RandomizerMode> RandomizerModeSetting { get; set; }
         public static ConfigEntry<bool> PerSession { get; set; }
         public static ConfigEntry<bool> EnableTextureCaching { get; set; }
+        public static ConfigEntry<bool> EnableVideoAudio { get; set; }
 
         private static ConfigFile configFile;
+
+        [Serializable]
+        public enum VideoAspectRatio
+        {
+            Stretch,
+            FitInside,
+            FitOutside,
+            NoScaling
+        }
 
         public static void Initialize(ManualLogSource logger)
         {
@@ -56,7 +66,14 @@ namespace CustomPosters
                 "Settings",
                 "EnableTextureCaching",
                 true,
-                "If true, caches textures in memory to improve performance. Disable to reduce memory usage."
+                "If true, caches textures and video paths in memory to improve performance. Disable to reduce memory usage."
+            );
+
+            EnableVideoAudio = configFile.Bind(
+                "Settings",
+                "EnableVideoAudio",
+                false,
+                "If true, enables audio playback for .mp4 poster videos. Disable to mute videos."
             );
 
             var modFolderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -96,7 +113,7 @@ namespace CustomPosters
                     foreach (var path in posterPaths)
                     {
                         var posterFiles = Directory.GetFiles(path)
-                            .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp" }.Contains(Path.GetExtension(f).ToLower()))
+                            .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()))
                             .ToList() ?? new List<string>();
                         foreach (var file in posterFiles)
                         {
@@ -111,6 +128,33 @@ namespace CustomPosters
                                     new AcceptableValueRange<int>(0, 100)
                                 )
                             );
+                            if (Path.GetExtension(file).ToLower() == ".mp4")
+                            {
+                                configFile.Bind(
+                                    modName,
+                                    $"{fileName}.Volume",
+                                    30,
+                                    new ConfigDescription(
+                                        $"Volume for video {fileName} (0-100).",
+                                        new AcceptableValueRange<int>(0, 100)
+                                    )
+                                );
+                                configFile.Bind(
+                                    modName,
+                                    "${fileName}.MaxDistance",
+                                    4.0f,
+                                    new ConfigDescription(
+                                        $"Maximum distance for audio playback of video {fileName} (1.0-5.0).",
+                                        new AcceptableValueRange<float>(1.0f, 5.0f)
+                                    )
+                                );
+                                configFile.Bind(
+                                    modName,
+                                    $"{fileName}.AspectRatio",
+                                    VideoAspectRatio.Stretch,
+                                    "Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
+                                );
+                            }
                         }
                     }
 
@@ -118,7 +162,7 @@ namespace CustomPosters
                     foreach (var path in tipPaths)
                     {
                         var tipFiles = Directory.GetFiles(path)
-                            .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp" }.Contains(Path.GetExtension(f).ToLower()))
+                            .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()))
                             .ToList() ?? new List<string>();
                         foreach (var file in tipFiles)
                         {
@@ -133,6 +177,33 @@ namespace CustomPosters
                                     new AcceptableValueRange<int>(0, 100)
                                 )
                             );
+                            if (Path.GetExtension(file).ToLower() == ".mp4")
+                            {
+                                configFile.Bind(
+                                    modName,
+                                    $"{fileName}.Volume",
+                                    30,
+                                    new ConfigDescription(
+                                        $"Volume for video {fileName} (0-100).",
+                                        new AcceptableValueRange<int>(0, 100)
+                                    )
+                                );
+                                configFile.Bind(
+                                    modName,
+                                    $"{fileName}.MaxDistance",
+                                    4.0f,
+                                    new ConfigDescription(
+                                        $"Maximum distance for audio playback of video {fileName} (1.0-5.0).",
+                                        new AcceptableValueRange<float>(1.0f, 5.0f)
+                                    )
+                                );
+                                configFile.Bind(
+                                    modName,
+                                    $"{fileName}.AspectRatio",
+                                    VideoAspectRatio.Stretch,
+                                    "Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
+                                );
+                            }
                         }
                     }
                 }
@@ -148,6 +219,44 @@ namespace CustomPosters
             configFile.SaveOnConfigSet = true;
         }
 
+        public static (int volume, float maxDistance, VideoAspectRatio aspectRatio) GetFileAudioSettings(string filePath)
+        {
+            string fileName = Path.GetFileName(filePath);
+            string normalizedFilePath = Path.GetFullPath(filePath).Replace('\\', '/').ToLower();
+
+            string mod = Plugin.Service.PosterFolders.FirstOrDefault(f =>
+            {
+                string normalizedPackPath = Path.GetFullPath(f).Replace('\\', '/').ToLower();
+                string normalizedCustomPostersPath = Path.Combine(normalizedPackPath, "CustomPosters").Replace('\\', '/');
+                return normalizedFilePath.Contains(normalizedPackPath) || normalizedFilePath.Contains(normalizedCustomPostersPath);
+            });
+
+            if (mod == null)
+            {
+                return (30, 4.0f, VideoAspectRatio.Stretch);
+            }
+
+            string modName = Path.GetFileName(mod);
+            int volume = configFile.Bind(
+                modName,
+                $"{fileName}.Volume",
+                30,
+                new ConfigDescription("", new AcceptableValueRange<int>(0, 100))
+            ).Value;
+            float maxDistance = configFile.Bind(
+                modName,
+                $"{fileName}.MaxDistance",
+                4.0f,
+                new ConfigDescription("", new AcceptableValueRange<float>(1.0f, 5.0f))
+            ).Value;
+            VideoAspectRatio aspectRatio = configFile.Bind(
+                modName,
+                $"{fileName}.AspectRatio",
+                VideoAspectRatio.Stretch,
+                new ConfigDescription("", null)
+            ).Value;
+            return (volume, maxDistance, aspectRatio);
+        }
         private static void MigrateOldConfigEntries(ManualLogSource logger, string configPath)
         {
             if (!File.Exists(configPath)) return;
@@ -233,7 +342,7 @@ namespace CustomPosters
             bool isPackEnabled = configFile.Bind(modName, "Enabled", true).Value;
             if (!isPackEnabled)
             {
-                return false; 
+                return false;
             }
 
             bool isFileEnabled = configFile.Bind(modName, fileName, true).Value;

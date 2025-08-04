@@ -36,7 +36,7 @@ namespace CustomPosters
         {
             public const string PLUGIN_GUID = "seeya.customposters";
             public const string PLUGIN_NAME = "CustomPosters";
-            public const string PLUGIN_VERSION = "2.0.0";
+            public const string PLUGIN_VERSION = "2.1.0";
         }
     }
 }

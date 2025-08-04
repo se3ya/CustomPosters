@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using HarmonyLib;
+using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Video;
 
 namespace CustomPosters
 {
@@ -17,7 +19,6 @@ namespace CustomPosters
         private static int _sessionMapSeed = 0;
         private static bool _isNewLobby = true;
         private static bool _sessionSeedInitialized = false;
-
 
         [HarmonyPatch(typeof(GameNetworkManager), "Start")]
         [HarmonyPostfix]
@@ -175,22 +176,137 @@ namespace CustomPosters
             return newPoster;
         }
 
-        private class PosterRenderer : MonoBehaviour
+        public class PosterRenderer : MonoBehaviour
         {
-            public void Initialize(Texture2D texture, Material materialTemplate)
+            private VideoPlayer _videoPlayer;
+            private AudioSource _audioSource;
+            private RenderTexture _renderTexture;
+
+            private static UnityEngine.Video.VideoAspectRatio ConvertAspectRatio(PosterConfig.VideoAspectRatio aspectRatio)
+            {
+                return aspectRatio switch
+                {
+                    PosterConfig.VideoAspectRatio.Stretch => UnityEngine.Video.VideoAspectRatio.Stretch,
+                    PosterConfig.VideoAspectRatio.FitInside => UnityEngine.Video.VideoAspectRatio.FitInside,
+                    PosterConfig.VideoAspectRatio.FitOutside => UnityEngine.Video.VideoAspectRatio.FitOutside,
+                    PosterConfig.VideoAspectRatio.NoScaling => UnityEngine.Video.VideoAspectRatio.NoScaling,
+                    _ => UnityEngine.Video.VideoAspectRatio.Stretch
+                };
+            }
+
+            public void Initialize(Texture2D texture, string videoPath, Material materialTemplate)
             {
                 var renderer = GetComponent<MeshRenderer>();
                 var material = new Material(materialTemplate);
 
-                if (texture != null)
+                if (videoPath != null && System.IO.Path.GetExtension(videoPath).ToLower() == ".mp4")
+                {
+                    _renderTexture = new RenderTexture(512, 512, 16);
+                    material.mainTexture = _renderTexture;
+
+                    _videoPlayer = gameObject.AddComponent<VideoPlayer>();
+                    _videoPlayer.url = "file://" + videoPath;
+                    _videoPlayer.renderMode = VideoRenderMode.RenderTexture;
+                    _videoPlayer.targetTexture = _renderTexture;
+                    var (volume, maxDistance, aspectRatio) = PosterConfig.GetFileAudioSettings(videoPath);
+                    _videoPlayer.aspectRatio = ConvertAspectRatio(aspectRatio);
+                    _videoPlayer.isLooping = true;
+                    _videoPlayer.playOnAwake = false;
+
+                    _audioSource = gameObject.AddComponent<AudioSource>();
+                    _audioSource.spatialBlend = 1.0f;
+                    _audioSource.spatialize = true;
+                    _audioSource.rolloffMode = AudioRolloffMode.Custom;
+                    var curve = new AnimationCurve(
+                        new Keyframe(0f, 1.0f),
+                        new Keyframe(0.157f, 0.547f),
+                        new Keyframe(0.517f, 0.278f),
+                        new Keyframe(1.259f, 0.102f),
+                        new Keyframe(2.690f, 0.033f),
+                        new Keyframe(4.0f, 0.0f)
+                    );
+                    _audioSource.SetCustomCurve(AudioSourceCurveType.CustomRolloff, curve);
+
+                    _audioSource.maxDistance = maxDistance;
+
+                    _videoPlayer.Stop();
+
+                    _videoPlayer.errorReceived += (player, message) =>
+                    {
+                        Plugin.Log.LogError($"VideoPlayer error for {videoPath}: {message}");
+                    };
+                    _videoPlayer.prepareCompleted += (player) =>
+                    {
+                        Plugin.Log.LogDebug($"Video prepared successfully: {videoPath}");
+                        player.Play();
+                    };
+
+                    if (PosterConfig.EnableVideoAudio.Value)
+                    {
+                        _videoPlayer.controlledAudioTrackCount = 1;
+                        _videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
+                        _videoPlayer.SetTargetAudioSource(0, _audioSource);
+                        _audioSource.volume = volume / 100.0f;
+                        _audioSource.mute = false;
+                        for (ushort track = 0; track < _videoPlayer.audioTrackCount; track++)
+                        {
+                            _videoPlayer.EnableAudioTrack(track, true);
+                        }
+                    }
+                    else
+                    {
+                        _videoPlayer.controlledAudioTrackCount = 0;
+                        _videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
+                        _audioSource.Stop();
+                        _audioSource.volume = 0f;
+                        _audioSource.mute = true;
+                        for (ushort track = 0; track < _videoPlayer.audioTrackCount; track++)
+                        {
+                            _videoPlayer.EnableAudioTrack(track, false);
+                        }
+                    }
+
+                    _videoPlayer.source = VideoSource.Url;
+                    _videoPlayer.enabled = true;
+                    _videoPlayer.Play();
+
+                    renderer.material = material;
+                }
+                else if (texture != null)
                 {
                     material.mainTexture = texture;
                     renderer.material = material;
                 }
                 else
                 {
-                    Plugin.Log.LogError("No texture provided for poster");
+                    Plugin.Log.LogError($"No valid texture or video for poster: {gameObject.name}");
                     Destroy(gameObject);
+                }
+            }
+
+            private void Update()
+            {
+                if (_audioSource != null && !PosterConfig.EnableVideoAudio.Value)
+                {
+                    if (_audioSource.isPlaying)
+                    {
+                        _audioSource.Stop();
+                    }
+                    _audioSource.volume = 0f;
+                    _audioSource.mute = true;
+                }
+            }
+
+            private void OnDestroy()
+            {
+                if (_renderTexture != null)
+                {
+                    _renderTexture.Release();
+                    UnityEngine.Object.Destroy(_renderTexture);
+                }
+                if (_videoPlayer != null && _videoPlayer.isPlaying)
+                {
+                    _videoPlayer.Stop();
                 }
             }
         }
@@ -430,6 +546,7 @@ namespace CustomPosters
             }
 
             var allTextures = new Dictionary<string, List<(Texture2D texture, string filePath)>>();
+            var allVideos = new Dictionary<string, List<string>>();
             foreach (var pack in packsToUse)
             {
                 string packName = Path.GetFileName(pack);
@@ -439,7 +556,7 @@ namespace CustomPosters
                 string nestedTipsPath = Path.Combine(pack, "CustomPosters", "tips");
 
                 var filesToLoad = new List<string>();
-                var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp" };
+                var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
 
                 var pathsToCheck = new[] { postersPath, tipsPath, nestedPostersPath, nestedTipsPath }
                     .Where(p => Directory.Exists(p))
@@ -465,28 +582,41 @@ namespace CustomPosters
                     var batch = filesToLoad.Skip(i).Take(batchSize).ToList();
                     foreach (var file in batch)
                     {
-                        yield return LoadTextureAsync(file, (result) =>
+                        if (Path.GetExtension(file).ToLower() == ".mp4")
                         {
-                            if (result.texture != null)
+                            var posterName = Path.GetFileNameWithoutExtension(file).ToLower();
+                            if (!allVideos.ContainsKey(posterName))
                             {
-                                var posterName = Path.GetFileNameWithoutExtension(file).ToLower();
-                                if (!allTextures.ContainsKey(posterName))
+                                allVideos[posterName] = new List<string>();
+                            }
+                            allVideos[posterName].Add(file);
+                            Plugin.Service.CacheVideo(file);
+                        }
+                        else
+                        {
+                            yield return LoadTextureAsync(file, (result) =>
+                            {
+                                if (result.texture != null)
                                 {
-                                    allTextures[posterName] = new List<(Texture2D, string)>();
+                                    var posterName = Path.GetFileNameWithoutExtension(file).ToLower();
+                                    if (!allTextures.ContainsKey(posterName))
+                                    {
+                                        allTextures[posterName] = new List<(Texture2D, string)>();
+                                    }
+                                    allTextures[posterName].Add((result.texture, file));
                                 }
-                                allTextures[posterName].Add((result.texture, file));
-                            }
-                            else
-                            {
-                                Plugin.Log.LogWarning($"Failed to load texture from {file}");
-                            }
-                        });
+                                else
+                                {
+                                    Plugin.Log.LogWarning($"Failed to load texture from {file}");
+                                }
+                            });
+                        }
                     }
                     yield return null;
                 }
             }
 
-            var prioritizedTextures = new Dictionary<string, (Texture2D texture, string filePath)>();
+            var prioritizedContent = new Dictionary<string, (Texture2D texture, string filePath, bool isVideo)>();
             foreach (var kvp in allTextures)
             {
                 if (kvp.Value.Count > 1)
@@ -502,40 +632,72 @@ namespace CustomPosters
                             cumulative += fileChances[i];
                             if (randomValue <= cumulative)
                             {
-                                prioritizedTextures[kvp.Key] = kvp.Value[i];
+                                prioritizedContent[kvp.Key] = (kvp.Value[i].texture, kvp.Value[i].filePath, false);
                                 break;
                             }
                         }
-                        if (!prioritizedTextures.ContainsKey(kvp.Key))
+                        if (!prioritizedContent.ContainsKey(kvp.Key))
                         {
-                            prioritizedTextures[kvp.Key] = kvp.Value[0];
+                            prioritizedContent[kvp.Key] = (kvp.Value[0].texture, kvp.Value[0].filePath, false);
                         }
-                        var selectedFile = Path.GetFileName(prioritizedTextures[kvp.Key].filePath);
-                        var otherFiles = kvp.Value.Where(t => t.filePath != prioritizedTextures[kvp.Key].filePath).Select(t => Path.GetFileName(t.filePath));
                     }
                     else
                     {
                         var selected = kvp.Value.OrderBy(t => Plugin.Service.GetFilePriority(t.filePath)).First();
-                        prioritizedTextures[kvp.Key] = selected;
-                        var otherFiles = kvp.Value.Where(t => t.filePath != selected.filePath).Select(t => Path.GetFileName(t.filePath));
+                        prioritizedContent[kvp.Key] = (selected.texture, selected.filePath, false);
                     }
                 }
                 else
                 {
-                    prioritizedTextures[kvp.Key] = kvp.Value[0];
+                    prioritizedContent[kvp.Key] = (kvp.Value[0].texture, kvp.Value[0].filePath, false);
                 }
             }
 
-            if (allTextures.Count == 0)
+            foreach (var kvp in allVideos)
             {
-                Plugin.Log.LogWarning("No textures found in enabled packs");
+                if (kvp.Value.Count > 1)
+                {
+                    var fileChances = kvp.Value.Select(v => PosterConfig.GetFileChance(v)).ToList();
+                    if (fileChances.Any(c => c > 0))
+                    {
+                        var totalChance = fileChances.Sum();
+                        var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
+                        double cumulative = 0;
+                        for (int i = 0; i < kvp.Value.Count; i++)
+                        {
+                            cumulative += fileChances[i];
+                            if (randomValue <= cumulative)
+                            {
+                                prioritizedContent[kvp.Key] = (null, kvp.Value[i], true);
+                                break;
+                            }
+                        }
+                        if (!prioritizedContent.ContainsKey(kvp.Key))
+                        {
+                            prioritizedContent[kvp.Key] = (null, kvp.Value[0], true);
+                        }
+                    }
+                    else
+                    {
+                        var selected = kvp.Value.OrderBy(v => Plugin.Service.GetFilePriority(v)).First();
+                        prioritizedContent[kvp.Key] = (null, selected, true);
+                    }
+                }
+                else
+                {
+                    prioritizedContent[kvp.Key] = (null, kvp.Value[0], true);
+                }
+            }
+
+            if (allTextures.Count == 0 && allVideos.Count == 0)
+            {
+                Plugin.Log.LogWarning("No textures or videos found in enabled packs");
                 if (posterPlane != null)
                 {
                     posterPlane.SetActive(true);
                 }
                 yield break;
             }
-
 
             bool anyPosterLoaded = false;
 
@@ -554,18 +716,19 @@ namespace CustomPosters
                 poster.transform.localScale = posterData[i].scale;
 
                 var posterKey = posterData[i].name.ToLower();
-                if (prioritizedTextures.ContainsKey(posterKey) && PosterConfig.IsFileEnabled(prioritizedTextures[posterKey].filePath))
+                if (prioritizedContent.ContainsKey(posterKey) && PosterConfig.IsFileEnabled(prioritizedContent[posterKey].filePath))
                 {
                     var renderer = poster.AddComponent<PosterRenderer>();
-                    renderer.Initialize(prioritizedTextures[posterKey].texture, _copiedMaterial);
+                    var (texture, filePath, isVideo) = prioritizedContent[posterKey];
+                    renderer.Initialize(texture, isVideo ? filePath : null, _copiedMaterial);
 
-                    Plugin.Log.LogDebug($"Loaded poster {posterData[i].name} from {prioritizedTextures[posterKey].filePath}");
                     CreatedPosters.Add(poster);
                     anyPosterLoaded = true;
+
                 }
                 else
                 {
-                    Plugin.Log.LogWarning($"No enabled texture found for {posterData[i].name}. Destroying the poster");
+                    Plugin.Log.LogWarning($"No enabled texture or video found for {posterData[i].name}. Destroying the poster");
                     UnityEngine.Object.Destroy(poster);
                 }
                 yield return null;
@@ -611,6 +774,7 @@ namespace CustomPosters
             yield return instance.StartCoroutine(CreateCustomPostersAsync());
             _materialsUpdated = true;
         }
+
         public static void ChangePosterPack(string packName)
         {
             if (string.IsNullOrEmpty(packName))
