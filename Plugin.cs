@@ -10,9 +10,9 @@ namespace CustomPosters
     [BepInDependency("mborsh.WiderShipMod", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
-        public static Plugin Instance { get; private set; }
+        public static Plugin Instance { get; private set; } = null!;
         public static ManualLogSource Log => Instance.Logger;
-        public static PosterService Service { get; private set; }
+        public static PosterService Service { get; private set; } = null!;
 
         private readonly Harmony _harmony = new(PluginInfo.PLUGIN_GUID);
 
