@@ -65,7 +65,7 @@ namespace CustomPosters
             EnableTextureCaching = configFile.Bind(
                 "Settings",
                 "EnableTextureCaching",
-                true,
+                false,
                 "If true, caches textures and video paths in memory to improve performance. Disable to reduce memory usage."
             );
 

@@ -8,3 +8,8 @@
 *.vsidx
 *.sqlite
 .vs/
+TS upload/README.md
+TS upload/manifest.json
+TS upload/icon.png
+TS upload/CustomPosters.dll
+TS upload/CHANGELOG.md

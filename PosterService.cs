@@ -308,7 +308,6 @@ namespace CustomPosters
             if (!_textureCache.ContainsKey(filePath))
             {
                 _textureCache[filePath] = texture;
-                Plugin.Log.LogDebug($"Cached texture: {filePath}");
             }
         }
 

@@ -531,7 +531,7 @@ namespace CustomPosters
                         _selectedPack = enabledPacks[Plugin.Service.Rand.Next(enabledPacks.Count)];
                     }
                     var selectedPackName = Path.GetFileName(_selectedPack);
-                    Plugin.Log.LogInfo($"PerPack randomization enabled. Using pack: {selectedPackName} [Chances: {string.Join(", ", packChances)}]");
+                    Plugin.Log.LogInfo($"PerPack randomization enabled. Using pack: {selectedPackName}");
                 }
                 packsToUse = new List<string> { _selectedPack };
             }
@@ -691,7 +691,7 @@ namespace CustomPosters
 
             if (allTextures.Count == 0 && allVideos.Count == 0)
             {
-                Plugin.Log.LogWarning("No textures or videos found in enabled packs");
+                Plugin.Log.LogWarning("No textures found in enabled packs");
                 if (posterPlane != null)
                 {
                     posterPlane.SetActive(true);
