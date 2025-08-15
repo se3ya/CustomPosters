@@ -11,7 +11,7 @@ namespace CustomPosters
     {
         private readonly List<string> _posterFolders = new List<string>();
         private readonly Dictionary<string, Texture2D> _textureCache = new Dictionary<string, Texture2D>();
-        private readonly Dictionary<string, string> _videoCache = new Dictionary<string, string>(); // Cache video file paths
+        private readonly Dictionary<string, string> _videoCache = new Dictionary<string, string>(); //! Cache video file paths
         private readonly string[] _validExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
         private System.Random _rand;
         public IReadOnlyList<string> PosterFolders => _posterFolders.AsReadOnly();
