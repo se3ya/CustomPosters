@@ -8,6 +8,7 @@ namespace CustomPosters
     [BepInDependency("TestAccount666.ShipWindows", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("MelanieMelicious.2StoryShip", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("mborsh.WiderShipMod", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("AndreyMrovol.BiggerShip", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public static Plugin Instance { get; private set; } = null!;
@@ -30,13 +31,6 @@ namespace CustomPosters
             Log.LogInfo("Patches applied successfully");
 
             Log.LogInfo($"{PluginInfo.PLUGIN_NAME} is loaded!");
-        }
-
-        public static class PluginInfo
-        {
-            public const string PLUGIN_GUID = "seeya.customposters";
-            public const string PLUGIN_NAME = "CustomPosters";
-            public const string PLUGIN_VERSION = "2.1.0";
         }
     }
 }
