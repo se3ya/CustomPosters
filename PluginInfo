@@ -1,9 +1,0 @@
-namespace CustomPosters
-{
-    public static class PluginInfo
-    {
-        public const string PLUGIN_GUID = "seeya.customposters";
-        public const string PLUGIN_NAME = "CustomPosters";
-        public const string PLUGIN_VERSION = "2.1.0";
-    }
-}

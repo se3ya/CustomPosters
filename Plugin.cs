@@ -4,7 +4,7 @@ using HarmonyLib;
 
 namespace CustomPosters
 {
-    [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
+    [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
     [BepInDependency("TestAccount666.ShipWindows", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("MelanieMelicious.2StoryShip", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("mborsh.WiderShipMod", BepInDependency.DependencyFlags.SoftDependency)]
@@ -12,25 +12,28 @@ namespace CustomPosters
     public class Plugin : BaseUnityPlugin
     {
         public static Plugin Instance { get; private set; } = null!;
-        public static ManualLogSource Log => Instance.Logger;
+        internal static ManualLogSource Log { get; private set; } = null!;
         public static PosterService Service { get; private set; } = null!;
 
-        private readonly Harmony _harmony = new(PluginInfo.PLUGIN_GUID);
+        private readonly Harmony _harmony = new(MyPluginInfo.PLUGIN_GUID);
 
         private void Awake()
         {
             Instance = this;
-            Log.LogInfo($"Initializing {PluginInfo.PLUGIN_NAME}");
+
+            Log = base.Logger;
+
+            Log.LogInfo($"Initializing {MyPluginInfo.PLUGIN_NAME}");
 
             Service = new PosterService();
 
-            PosterConfig.Initialize(Log);
+            PosterConfig.Initialize(Log, Config);
 
             Log.LogDebug("Applying patches");
-            _harmony.PatchAll(typeof(Patches));
+            _harmony.PatchAll(typeof(GameLifecyclePatches));
             Log.LogInfo("Patches applied successfully");
 
-            Log.LogInfo($"{PluginInfo.PLUGIN_NAME} is loaded!");
+            Log.LogInfo($"{MyPluginInfo.PLUGIN_NAME} is loaded!");
         }
     }
 }

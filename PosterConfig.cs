@@ -19,12 +19,12 @@ namespace CustomPosters
             PerPoster
         }
 
-        public static ConfigEntry<RandomizerMode> RandomizerModeSetting { get; set; }
-        public static ConfigEntry<bool> PerSession { get; set; }
-        public static ConfigEntry<bool> EnableTextureCaching { get; set; }
-        public static ConfigEntry<bool> EnableVideoAudio { get; set; }
+        public static ConfigEntry<RandomizerMode> RandomizerModeSetting { get; set; } = null!;
+        public static ConfigEntry<bool> PerSession { get; set; } = null!;
+        public static ConfigEntry<bool> EnableTextureCaching { get; set; } = null!;
+        public static ConfigEntry<bool> EnableVideoAudio { get; set; } = null!;
 
-        private static ConfigFile configFile;
+        private static ConfigFile configFile = null!;
 
         [Serializable]
         public enum VideoAspectRatio
@@ -35,18 +35,12 @@ namespace CustomPosters
             NoScaling
         }
 
-        public static void Initialize(ManualLogSource logger)
+        public static void Initialize(ManualLogSource logger, ConfigFile config)
         {
-            string configPath = Path.Combine(Paths.ConfigPath, "CustomPosters.cfg");
-            configFile = new ConfigFile(configPath, true);
+            configFile = config;
             configFile.SaveOnConfigSet = false;
 
-            MigrateOldConfigEntries(logger, configPath);
-
-            if (File.Exists(configPath))
-            {
-                File.WriteAllText(configPath, string.Empty);
-            }
+            MigrateOldConfigEntries(logger, configFile.ConfigFilePath);
 
             RandomizerModeSetting = configFile.Bind(
                 "Settings",
@@ -92,8 +86,8 @@ namespace CustomPosters
                         continue;
                     }
 
-                    var packConf = configFile.Bind(modName, "Enabled", true, $"Enable or disable the {modName} pack");
-                    var packChanceConf = configFile.Bind(
+                    configFile.Bind(modName, "Enabled", true, $"Enable or disable the {modName} pack");
+                    configFile.Bind(
                         modName,
                         "Chance",
                         0,
@@ -114,7 +108,7 @@ namespace CustomPosters
                     {
                         var posterFiles = Directory.GetFiles(path)
                             .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()))
-                            .ToList() ?? new List<string>();
+                            .ToList();
                         foreach (var file in posterFiles)
                         {
                             var fileName = Path.GetFileName(file);
@@ -141,7 +135,7 @@ namespace CustomPosters
                                 );
                                 configFile.Bind(
                                     modName,
-                                    "${fileName}.MaxDistance",
+                                    $"{fileName}.MaxDistance",
                                     4.0f,
                                     new ConfigDescription(
                                         $"Maximum distance for audio playback of video {fileName} (1.0-5.0).",
@@ -152,7 +146,7 @@ namespace CustomPosters
                                     modName,
                                     $"{fileName}.AspectRatio",
                                     VideoAspectRatio.Stretch,
-                                    "Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
+                                    $"Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
                                 );
                             }
                         }
@@ -163,7 +157,7 @@ namespace CustomPosters
                     {
                         var tipFiles = Directory.GetFiles(path)
                             .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()))
-                            .ToList() ?? new List<string>();
+                            .ToList();
                         foreach (var file in tipFiles)
                         {
                             var fileName = Path.GetFileName(file);
@@ -201,7 +195,7 @@ namespace CustomPosters
                                     modName,
                                     $"{fileName}.AspectRatio",
                                     VideoAspectRatio.Stretch,
-                                    "Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
+                                    $"Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
                                 );
                             }
                         }
@@ -210,7 +204,6 @@ namespace CustomPosters
                 catch (Exception ex)
                 {
                     logger.LogError($"Failed to parse mod path {mod}: {ex.Message}");
-                    continue;
                 }
             }
 
@@ -219,24 +212,31 @@ namespace CustomPosters
             configFile.SaveOnConfigSet = true;
         }
 
-        public static (int volume, float maxDistance, VideoAspectRatio aspectRatio) GetFileAudioSettings(string filePath)
+        private static string? GetModNameFromFilePath(string filePath)
         {
-            string fileName = Path.GetFileName(filePath);
             string normalizedFilePath = Path.GetFullPath(filePath).Replace('\\', '/').ToLower();
 
-            string mod = Plugin.Service.PosterFolders.FirstOrDefault(f =>
+            string? mod = Plugin.Service.PosterFolders.FirstOrDefault(f =>
             {
                 string normalizedPackPath = Path.GetFullPath(f).Replace('\\', '/').ToLower();
                 string normalizedCustomPostersPath = Path.Combine(normalizedPackPath, "CustomPosters").Replace('\\', '/');
                 return normalizedFilePath.Contains(normalizedPackPath) || normalizedFilePath.Contains(normalizedCustomPostersPath);
             });
 
-            if (mod == null)
+            return mod != null ? Path.GetFileName(mod) : null;
+        }
+
+        public static (int volume, float maxDistance, VideoAspectRatio aspectRatio) GetFileAudioSettings(string filePath)
+        {
+            string fileName = Path.GetFileName(filePath);
+            
+            string? modName = GetModNameFromFilePath(filePath);
+
+            if (modName == null)
             {
                 return (30, 4.0f, VideoAspectRatio.Stretch);
             }
 
-            string modName = Path.GetFileName(mod);
             int volume = configFile.Bind(
                 modName,
                 $"{fileName}.Volume",
@@ -252,11 +252,11 @@ namespace CustomPosters
             VideoAspectRatio aspectRatio = configFile.Bind(
                 modName,
                 $"{fileName}.AspectRatio",
-                VideoAspectRatio.Stretch,
-                new ConfigDescription("", null)
+                VideoAspectRatio.Stretch
             ).Value;
             return (volume, maxDistance, aspectRatio);
         }
+
         private static void MigrateOldConfigEntries(ManualLogSource logger, string configPath)
         {
             if (!File.Exists(configPath)) return;
@@ -324,67 +324,50 @@ namespace CustomPosters
         public static bool IsFileEnabled(string filePath)
         {
             string fileName = Path.GetFileName(filePath);
-            string normalizedFilePath = Path.GetFullPath(filePath).Replace('\\', '/').ToLower();
+            
+            string? modName = GetModNameFromFilePath(filePath);
 
-            string mod = Plugin.Service.PosterFolders.FirstOrDefault(f =>
-            {
-                string normalizedPackPath = Path.GetFullPath(f).Replace('\\', '/').ToLower();
-                string normalizedCustomPostersPath = Path.Combine(normalizedPackPath, "CustomPosters").Replace('\\', '/');
-                return normalizedFilePath.Contains(normalizedPackPath) || normalizedFilePath.Contains(normalizedCustomPostersPath);
-            });
-
-            if (mod == null)
+            if (modName == null)
             {
                 return false;
             }
 
-            string modName = Path.GetFileName(mod);
             bool isPackEnabled = configFile.Bind(modName, "Enabled", true).Value;
             if (!isPackEnabled)
             {
                 return false;
             }
 
-            bool isFileEnabled = configFile.Bind(modName, fileName, true).Value;
-            if (!isFileEnabled)
-            {
-            }
-
-            return isFileEnabled;
+            return configFile.Bind(modName, fileName, true).Value;
         }
 
         public static int GetFileChance(string filePath)
         {
             string fileName = Path.GetFileName(filePath);
-            string normalizedFilePath = Path.GetFullPath(filePath).Replace('\\', '/').ToLower();
 
-            string mod = Plugin.Service.PosterFolders.FirstOrDefault(f =>
-            {
-                string normalizedPackPath = Path.GetFullPath(f).Replace('\\', '/').ToLower();
-                string normalizedCustomPostersPath = Path.Combine(normalizedPackPath, "CustomPosters").Replace('\\', '/');
-                return normalizedFilePath.Contains(normalizedPackPath) || normalizedFilePath.Contains(normalizedCustomPostersPath);
-            });
+            string? modName = GetModNameFromFilePath(filePath);
 
-            if (mod == null)
+            if (modName == null)
             {
                 return 0;
             }
 
-            string modName = Path.GetFileName(mod);
-            int chance = configFile.Bind(
+            return configFile.Bind(
                 modName,
                 $"{fileName}.Chance",
                 0,
                 new ConfigDescription("", new AcceptableValueRange<int>(0, 100))
             ).Value;
-            return chance;
         }
 
         private static void ClearOrphanedEntries()
         {
-            PropertyInfo orphanedEntriesProp = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries");
-            var orphanedEntries = (System.Collections.Generic.Dictionary<ConfigDefinition, string>)orphanedEntriesProp.GetValue(configFile);
-            orphanedEntries.Clear();
+            PropertyInfo? orphanedEntriesProp = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries");
+            if (orphanedEntriesProp != null)
+            {
+                var orphanedEntries = (Dictionary<ConfigDefinition, string>?)orphanedEntriesProp.GetValue(configFile);
+                orphanedEntries?.Clear();
+            }
         }
     }
 }

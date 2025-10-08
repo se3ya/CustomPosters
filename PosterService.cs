@@ -13,14 +13,15 @@ namespace CustomPosters
         private readonly Dictionary<string, Texture2D> _textureCache = new Dictionary<string, Texture2D>();
         private readonly Dictionary<string, string> _videoCache = new Dictionary<string, string>(); //! Cache video file paths
         private readonly string[] _validExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
-        private System.Random _rand;
+        private System.Random _rand = null!;
         public IReadOnlyList<string> PosterFolders => _posterFolders.AsReadOnly();
 
         public bool IsShipWindowsInstalled { get; private set; }
         public bool IsWindow2Enabled { get; private set; }
         public bool IsWiderShipModInstalled { get; private set; }
-        public string WiderShipExtendedSide { get; private set; }
+        public string WiderShipExtendedSide { get; private set; } = "Both";
         public bool Is2StoryShipModInstalled { get; private set; }
+        public bool IsBiggerShipInstalled { get; private set; }
         public bool EnableRightWindows { get; private set; }
         public bool EnableLeftWindows { get; private set; }
         public Dictionary<string, bool> ShipWindowsStates { get; private set; } = new Dictionary<string, bool>();
@@ -71,7 +72,17 @@ namespace CustomPosters
             InitializeShipWindows();
             InitializeWiderShipMod();
             Initialize2StoryShipMod();
+            InitializeBiggerShipMod();
             SetRandomSeed(Environment.TickCount);
+        }
+
+        private void InitializeBiggerShipMod()
+        {
+            IsBiggerShipInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("AndreyMrovol.BiggerShip");
+            if (IsBiggerShipInstalled)
+            {
+                Plugin.Log.LogInfo("BiggerShip mod detected. Applying compatibility logic.");
+            }
         }
 
         private void InitializeShipWindows()
@@ -291,7 +302,7 @@ namespace CustomPosters
             _rand = new System.Random(seed);
         }
 
-        public Texture2D GetCachedTexture(string filePath)
+        public Texture2D? GetCachedTexture(string filePath)
         {
             if (!PosterConfig.EnableTextureCaching.Value) return null;
             if (_textureCache.TryGetValue(filePath, out var texture))
@@ -311,7 +322,7 @@ namespace CustomPosters
             }
         }
 
-        public string GetCachedVideo(string filePath)
+        public string? GetCachedVideo(string filePath)
         {
             if (!PosterConfig.EnableTextureCaching.Value) return null;
             if (_videoCache.TryGetValue(filePath, out var videoPath))
