@@ -1,6 +1,8 @@
 ﻿# Build output folders
 [Bb]in/
 [Oo]bj/
+[Dd]ebug/
+[Rr]elease/
 
 # IDE-specific folders and files
 .vs/
