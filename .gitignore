@@ -15,4 +15,4 @@
 *.vsidx
 *.sqlite
 
-/Thunderstore/build
+/Thunderstore/build*
