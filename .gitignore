@@ -1,16 +1,16 @@
-﻿/libs
-/bin
-/obj
-/.idea
+﻿# Build output folders
+[Bb]in/
+[Oo]bj/
+
+# IDE-specific folders and files
+.vs/
+.vscode/
+*.csproj.user
+*.sln.DotSettings.user
+
+# Other temporary files
 *.db
 *.db-shm
 *.db-wal
 *.vsidx
 *.sqlite
-.vs/
-TS upload/README.md
-TS upload/manifest.json
-TS upload/icon.png
-TS upload/CustomPosters.dll
-TS upload/CHANGELOG.md
-.vscode

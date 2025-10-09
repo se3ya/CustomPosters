@@ -4,7 +4,7 @@
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<AssemblyName>CustomPosters</AssemblyName>
 		<Description>Replaces the default posters in the ship with custom posters</Description>
-		<Version>2.1.0</Version>
+		<Version>3.0.0</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
 
@@ -25,10 +25,6 @@
 		<PackageReference Include="UnityEngine.Modules" Version="2022.3.9" IncludeAssets="compile" PrivateAssets="all" />
 		<PackageReference Include="LethalCompany.GameLibs.Steam" Publicize="true" Version="*-*" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Include="App.config" />
 	</ItemGroup>
 
 </Project>

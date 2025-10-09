@@ -1,0 +1,32 @@
+[config]
+schemaVersion = "0.0.1"
+
+[general]
+repository = "https://thunderstore.io"
+
+[package]
+namespace = "seechela"
+name = "CustomPosters"
+description = "Replaces the default posters in the ship with custom posters. You can add your own images!"
+websiteUrl = "https://github.com/se3ya/CustomPosters"
+containsNswContent = false
+
+[package.dependencies]
+BepInEx-BepInExPack = "5.4.2100"
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "./build"
+
+[[build.copy]]
+source = "./Plugin/bin/Release/netstandard2.1/CustomPosters.dll"
+target = "BepInEx/plugins/CustomPosters/CustomPosters.dll"
+
+[[build.copy]]
+source = "./CHANGELOG.md"
+target = "/"
+
+[[build.copy]]
+source = "./README.md"
+target = "/"

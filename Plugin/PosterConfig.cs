@@ -127,7 +127,7 @@ namespace CustomPosters
                                 configFile.Bind(
                                     modName,
                                     $"{fileName}.Volume",
-                                    30,
+                                    20,
                                     new ConfigDescription(
                                         $"Volume for video {fileName} (0-100).",
                                         new AcceptableValueRange<int>(0, 100)
@@ -176,7 +176,7 @@ namespace CustomPosters
                                 configFile.Bind(
                                     modName,
                                     $"{fileName}.Volume",
-                                    30,
+                                    20,
                                     new ConfigDescription(
                                         $"Volume for video {fileName} (0-100).",
                                         new AcceptableValueRange<int>(0, 100)
@@ -240,7 +240,7 @@ namespace CustomPosters
             int volume = configFile.Bind(
                 modName,
                 $"{fileName}.Volume",
-                30,
+                20,
                 new ConfigDescription("", new AcceptableValueRange<int>(0, 100))
             ).Value;
             float maxDistance = configFile.Bind(
