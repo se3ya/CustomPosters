@@ -1,16 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="..\Plugin\CustomPosters\CustomPosters.csproj" />
+    </ItemGroup>
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
-        <Version>2.2.0</Version>
     </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\Plugin\CustomPosters.csproj" />
-    </ItemGroup>
-
     <Target Name="PackThunderstore" AfterTargets="PostBuildEvent" Condition="$(Configuration) == 'Release'">
-        <Exec Command="dotnet tcli build --config-path &quot;./Thunderstore/thunderstore.toml&quot; --package-version $(Version)" />
+        <Exec Command="dotnet tcli build --config-path &quot;$(SolutionDir)Thunderstore/thunderstore.toml&quot; --package-version $(Version)"  />
     </Target>
-
 </Project>

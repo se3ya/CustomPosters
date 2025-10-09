@@ -20,13 +20,9 @@ readme = "./README.md"
 outdir = "./build"
 
 [[build.copy]]
-source = "./Plugin/bin/Release/netstandard2.1/CustomPosters.dll"
+source = "../Plugin/CustomPosters/bin/Release/netstandard2.1/CustomPosters.dll"
 target = "BepInEx/plugins/CustomPosters/CustomPosters.dll"
 
 [[build.copy]]
 source = "./CHANGELOG.md"
-target = "/"
-
-[[build.copy]]
-source = "./README.md"
 target = "/"
