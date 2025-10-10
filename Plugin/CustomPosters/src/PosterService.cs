@@ -21,7 +21,6 @@ namespace CustomPosters
         public bool IsWiderShipModInstalled { get; private set; }
         public string WiderShipExtendedSide { get; private set; } = "Both";
         public bool Is2StoryShipModInstalled { get; private set; }
-        public bool IsBiggerShipInstalled { get; private set; }
         public bool EnableRightWindows { get; private set; }
         public bool EnableLeftWindows { get; private set; }
         public Dictionary<string, bool> ShipWindowsStates { get; private set; } = new Dictionary<string, bool>();
@@ -72,17 +71,7 @@ namespace CustomPosters
             InitializeShipWindows();
             InitializeWiderShipMod();
             Initialize2StoryShipMod();
-            InitializeBiggerShipMod();
             SetRandomSeed(Environment.TickCount);
-        }
-
-        private void InitializeBiggerShipMod()
-        {
-            IsBiggerShipInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("AndreyMrovol.BiggerShip");
-            if (IsBiggerShipInstalled)
-            {
-                Plugin.Log.LogInfo("BiggerShip mod detected. Applying compatibility logic.");
-            }
         }
 
         private void InitializeShipWindows()

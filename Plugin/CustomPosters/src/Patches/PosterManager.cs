@@ -376,7 +376,6 @@ namespace CustomPosters
                     continue;
                 }
                 
-                // CHANGED: Using uppercase properties from our new PosterData struct
                 poster.name = posterData[i].Name;
                 poster.transform.SetParent(postersParent.transform);
                 poster.transform.position = posterData[i].Position;
@@ -425,128 +424,6 @@ namespace CustomPosters
             }
         }
 
-        private static IEnumerator UpdateBiggerShipPostersAsync()
-        {
-            CleanUpPosters();
-            
-            var posterParent = GameObject.Find("Environment/HangarShip/Plane.001/Posters");
-            if (posterParent == null)
-            {
-                Plugin.Log.LogError("BiggerShip compatibility error: Could not find the 'Posters' parent object.");
-                yield break;
-            }
-
-            var posterNames = new List<string>();
-            foreach (Transform posterTransform in posterParent.transform)
-            {
-                posterNames.Add(posterTransform.name.ToLower());
-            }
-
-            if (posterNames.Count == 0)
-            {
-                Plugin.Log.LogWarning("BiggerShip compatibility: No child poster objects found.");
-                yield break;
-            }
-
-            var enabledPacks = Plugin.Service.PosterFolders.Where(folder => Plugin.ModConfig.IsPackEnabled(folder)).ToList();
-            if (enabledPacks.Count == 0)
-            {
-                Plugin.Log.LogWarning("No enabled packs found");
-                yield break;
-            }
-
-            List<string> packsToUse;
-            if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
-            {
-                if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
-                {
-                    _selectedPack = enabledPacks[Plugin.Service.Rand.Next(enabledPacks.Count)];
-                }
-                packsToUse = new List<string> { _selectedPack! };
-            }
-            else
-            {
-                packsToUse = enabledPacks;
-            }
-
-            var allTextures = new Dictionary<string, List<(Texture2D texture, string filePath)>>();
-            var allVideos = new Dictionary<string, List<string>>();
-
-            foreach (var pack in packsToUse)
-            {
-                var pathsToCheck = new[] { Path.Combine(pack, "posters"), Path.Combine(pack, "tips"), Path.Combine(pack, "CustomPosters", "posters"), Path.Combine(pack, "CustomPosters", "tips") }
-                    .Where(Directory.Exists);
-
-                foreach (var path in pathsToCheck)
-                {
-                    var files = Directory.GetFiles(path)
-                        .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()) && Plugin.ModConfig.IsFileEnabled(f))
-                        .ToList();
-
-                    foreach (var file in files)
-                    {
-                        if (Path.GetExtension(file).ToLower() == ".mp4")
-                        {
-                            var videoName = Path.GetFileNameWithoutExtension(file).ToLower();
-                            if (!allVideos.ContainsKey(videoName)) allVideos[videoName] = new List<string>();
-                            allVideos[videoName].Add(file);
-                            Plugin.Service.CacheVideo(file);
-                        }
-                        else
-                        {
-                            yield return LoadTextureAsync(file, result =>
-                            {
-                                if (result.texture != null && result.filePath != null)
-                                {
-                                    var textureName = Path.GetFileNameWithoutExtension(result.filePath).ToLower();
-                                    if (!allTextures.ContainsKey(textureName)) allTextures[textureName] = new List<(Texture2D, string)>();
-                                    allTextures[textureName].Add((result.texture, result.filePath));
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-
-            var prioritizedContent = new Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)>();
-            foreach (var kvp in allTextures)
-            {
-                var selected = kvp.Value.OrderBy(t => Plugin.Service.GetFilePriority(t.filePath)).First();
-                prioritizedContent[kvp.Key] = (selected.Item1, selected.Item2, false);
-            }
-            foreach (var kvp in allVideos)
-            {
-                var selected = kvp.Value.OrderBy(v => Plugin.Service.GetFilePriority(v)).First();
-                prioritizedContent[kvp.Key] = (null, selected, true);
-            }
-            
-            foreach (Transform posterTransform in posterParent.transform)
-            {
-                var posterObject = posterTransform.gameObject;
-                var posterKey = posterObject.name.ToLower();
-
-                if (prioritizedContent.TryGetValue(posterKey, out var content))
-                {
-                    var meshRenderer = posterObject.GetComponent<MeshRenderer>();
-                    if (meshRenderer == null)
-                    {
-                        Plugin.Log.LogWarning($"BiggerShip compatibility: Poster '{posterObject.name}' has no MeshRenderer.");
-                        continue;
-                    }
-
-                    var rendererComponent = posterObject.AddComponent<PosterRenderer>();
-                    rendererComponent.Initialize(content.texture, content.isVideo ? content.filePath : null, meshRenderer.material);
-                    Plugin.Log.LogInfo($"Applied custom content to BiggerShip poster: {posterObject.name}");
-                }
-                else
-                {
-                    Plugin.Log.LogDebug($"No custom content found for BiggerShip poster: {posterObject.name}");
-                }
-                yield return null;
-            }
-
-            Plugin.Log.LogInfo("Finished applying textures to BiggerShip posters.");
-        }
 
         private static IEnumerator DelayedUpdateMaterialsAsync(StartOfRound instance)
         {
@@ -555,24 +432,12 @@ namespace CustomPosters
 
             yield return new WaitForEndOfFrame();
 
-            if (Plugin.Service.IsBiggerShipInstalled)
-            {
-                yield return instance.StartCoroutine(UpdateBiggerShipPostersAsync());
-            }
-            else
-            {
-                var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-                if (posterPlane != null)
-                {
-                    posterPlane.SetActive(false);
-                }
-
-                HideVanillaPosterPlane();
-                yield return instance.StartCoroutine(CreateCustomPostersAsync());
-            }
+            HideVanillaPosterPlane();
+            yield return instance.StartCoroutine(CreateCustomPostersAsync());
 
             _materialsUpdated = true;
         }
+
 
         public static void ChangePosterPack(string packName)
         {
