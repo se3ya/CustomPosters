@@ -1,6 +1,6 @@
 ---
 # CustomPosters
-### **A mod for Lethal Company that replaces the default posters in the ship with custom posters. You can add your own images to create a personalized experience!**
+### **A mod for Lethal Company that replaces the vanilla posters in the ship with custom posters added by user.**
 
 ---
 
@@ -20,33 +20,32 @@
 ## Quick Start
 
 1. Download and install [GaleModManager](https://thunderstore.io/c/lethal-company/p/Kesomannen/GaleModManager/).
-2. Download the latest version of **CustomPosters** from [Thunderstore](https://thunderstore.io/c/lethal-company/p/seechela/CustomPosters/).
-3. Add your custom posters to the `posters` and `tips` folders as described in the [Adding Custom Posters](#adding-custom-posterscreating-custom-posters-mod) section.
-4. Configure poster packs and probabilities in the `CustomPosters.cfg` file (optional).
-5. Launch the game and enjoy your custom posters!
+2. Download the latest version of **CustomPosters** from [Thunderstore](https://thunderstore.io/c/lethal-company/p/seechela/CustomPosters/) or github [Releases](https://github.com/se3ya/CustomPosters/releases).
+3. Add your images to the `posters` and `tips` folders as described in the [Adding Custom Posters](#adding-custom-posterscreating-custom-posters-mod).
+4. Configure poster packs in the `CustomPosters.cfg` as you want.
 
 ---
 
 ## Features
 
-- Override the default posters in the ship with your own custom images.
-- Support for multiple poster packs, with the ability to enable/disable poster packs or posters itself, change chances of the packs and posters via configuration.
+- Overrides the vanilla posters in the ship with your own images.
+- Supports multiple poster packs. 
+- Ability to adjust posters, enable/disable packs and posters, change chances of the packs and posters, change volume, max distance and aspect ratio of `.mp4` posters via config file.
 - If any custom poster fails to load, the mod will disable that poster at all.
   - If you have more than 2 poster mods and first poster don't load, it will try to load second poster instead.
 - Compatible with **ShipWindows**, **2 sToRy ShIp** and **WiderShipMod**.
 - Optimized to prevent texture leaking.
-- Tool called [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) which allows to crop posters from **LethalPosters** mod to be compatible with **CustomPosters**.
-  - **Sizes of the posters might be slightly be incorrect after cropping!**
+- [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**.
+  - *Sizes of the posters will be slightly incorrect after cropping!*
 
 ---
 
 ## Adding Custom Posters
-### Requirements
-- CustomPosters
-- Supported formats - `.png`, `.jpg`, `.jpeg`, `.bmp`.
+### Supported formats
+- `.png`, `.jpg`, `.jpeg`, `.bmp`, `.mp4`.
 ### Steps
 1. Create a folder structure for your custom poster pack in the `BepInEx/plugins` directory as shown below.
-2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly (e.g., `Poster1.png`, `CustomTips.jpg`).
+2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly - *`Poster1.png`, `Poster2.mp4`, `Poster3.bmp`, `Poster4.jpeg`, `Poster5.png`* and *`CustomTips.jpg`*.
 
 **Folder Structure**:
 _<p><small>Poster image names must match the structure below.</small></p>_
@@ -73,10 +72,7 @@ _<p><small>Poster image names must match the structure below.</small></p>_
 - CustomTips - 860 Width, 1219 Height
 ---
 
-## Configuration
-The mod automatically generates a configuration file (`CustomPosters.cfg`) in the `BepInEx/config` folder. You can use this file to customize the behavior of the mod.
-
-### Configuration Options
+## Configuration Options
 
 - **Randomier mode**:
   - *PerPack (default)*: Selects one pack randomly for all posters.
@@ -92,6 +88,12 @@ The mod automatically generates a configuration file (`CustomPosters.cfg`) in th
 - **Per-Poster Chance**:
   - For each poster in a pack, set a probability (0–100). If any poster has a `Chance > 0`, weighted selection applies.
   - Having 2 and more poster packs and one of the poster pack has (e.g. Poster2) `Chance = 70` and second poster pack with same poster has `Chance = 0` means that second poster pack poster is excluded from selection within that pack.
+- **Volume**:
+  - Configure volume of `.mp4` posters.
+- **Max distance**:
+  - Configure maximum audio distance of `.mp4` posters.
+- **Aspect ratio**:
+  - Choose aspect ratio of `.mp4` posters *[ Stretch 'X', FitInside, FitOutside, NoScaling ]*.
 - **TextureCaching**:
   - *Enabled (Default)*: Stores textures in memory for faster access, reducing disk reads.
   - *Disabled*: Loads textures from disk each time, which may slightly increase load times (based on image size).
@@ -101,7 +103,7 @@ The mod automatically generates a configuration file (`CustomPosters.cfg`) in th
 ## FAQ
 
 ### **Q: Can I use multiple poster packs at the same time?**
-Yes! The mod supports multiple poster packs. You can enable or disable packs in the configuration file.
+Yes! The mod supports multiple poster packs. You can configure poster packs in the config.
 
 ### **Q: Is this mod compatible with other ship mods?**
 Yes, the mod is compatible with **ShipWindows**, **2 sToRy ShIp**, and **WiderShipMod**. Poster positions are automatically adjusted based on the installed mods.
@@ -110,7 +112,7 @@ Yes, the mod is compatible with **ShipWindows**, **2 sToRy ShIp**, and **WiderSh
 Yes, but for best results, use the recommended sizes listed in the [Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#recommended-poster-sizes--in-pixels-) section.
 
 ### **Q: What happens if a poster fails to load?**
-The mod disables that poster and falls back to the vanilla poster or another valid poster from an enabled pack.
+*CustomPosters* disables that poster that didn't load and tries to choose poster that is enabled in other pack. If all posters didn't load, *CustomPosters* falls back to the vanilla poster or another enabled poster from an enabled pack.
 
 ---
 
@@ -119,10 +121,10 @@ The mod disables that poster and falls back to the vanilla poster or another val
 1. Ensure your images are named correctly (e.g., `Poster1.png`, `CustomTips.png`).
 2. Check the `BepInEx/LogOutput.log` file for errors related to texture loading.
 3. Make sure the posters and tips folders are in the correct location as shown in *[Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#adding-custom-posterscreating-custom-posters-mod)*.
-4. Confirm images are in supported formats (`.png`, `.jpg`, `.jpeg`, `.bmp`) and not corrupted.
+4. Confirm images are in supported formats (`.png`, `.jpg`, `.jpeg`, `.bmp`, `.mp4`) and not corrupted.
 
 ### Default Poster (Plane.001) is Still Visible
-- This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled, check log file for errors and ensure your images are valid.
+- This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled.
 
 ---
 
@@ -139,6 +141,6 @@ Distributed under the GPL v3 License. See LICENSE.txt for more information
 ---
 
 ### 💖 Support
-If you enjoy my work, consider [supporting](https://www.buymeacoffee.com/see_ya) us. Donations are optional but greatly appreciated.
+If you enjoy my work, consider [supporting](https://www.buymeacoffee.com/see_ya) me. Donations are optional but greatly appreciated.
 
 ---

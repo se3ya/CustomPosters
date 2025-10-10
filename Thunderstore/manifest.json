@@ -1,0 +1,9 @@
+{
+    "name": "CustomPosters",
+    "version_number": "2.0.0",
+    "website_url": "https://github.com/se3ya/CustomPosters",
+    "description": "Replaces the default posters in the ship with custom posters. You can add your own images! ",
+    "dependencies": [
+	  "BepInEx-BepInExPack-5.4.2100"
+    ]
+}
