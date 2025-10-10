@@ -49,7 +49,7 @@ namespace CustomPosters
 
                 _audioSource = gameObject.AddComponent<AudioSource>();
                 _audioSource.spatialBlend = 1.0f;
-                _audioSource.spatialize = true;
+                _audioSource.spatialize = false;
                 _audioSource.rolloffMode = AudioRolloffMode.Custom;
                 var curve = new AnimationCurve(
                     new Keyframe(0f, 1.0f),
