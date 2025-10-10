@@ -5,13 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - 2025-08-DD - "Video Support"
+## [3.0.0] - 2025-08-DD - "The Overhaul"
 ### Added
 - Added .mp4 support.
   - Added a config option to enable or disable the audio of the poster *mp4* *[ default is false ]* 
-  - Added a config option for each .mp4 poster to change the volume of the video *[ default is false ]* 
+  - Added a config option for each .mp4 poster to change the volume of the video *[ default is false ]*  
 
 ### Changed
+- Replaced creating posters via code with AssetBundle.
+- Config overhaul.
 - Refactored and reorganized the entire codebase.
 
 ## [2.0.0] - 2025-06-09 - "Major update"

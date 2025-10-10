@@ -14,6 +14,7 @@ namespace CustomPosters
         public static Plugin Instance { get; private set; } = null!;
         internal static ManualLogSource Log { get; private set; } = null!;
         public static PosterService Service { get; private set; } = null!;
+        public static PosterConfig ModConfig { get; private set; } = null!;
 
         private readonly Harmony _harmony = new(MyPluginInfo.PLUGIN_GUID);
 
@@ -25,13 +26,16 @@ namespace CustomPosters
 
             Log.LogInfo($"Initializing {MyPluginInfo.PLUGIN_NAME}");
 
-            Service = new PosterService();
+            AssetManager.LoadAssets();  
 
-            PosterConfig.Initialize(Log, Config);
+            ModConfig = new PosterConfig(Config);
+            Service = new PosterService();
+            
+            ModConfig.Initialize();
 
             Log.LogDebug("Applying patches");
             _harmony.PatchAll(typeof(GameLifecyclePatches));
-            Log.LogInfo("Patches applied successfully");
+            Log.LogDebug("Patches applied successfully");
 
             Log.LogInfo($"{MyPluginInfo.PLUGIN_NAME} is loaded!");
         }

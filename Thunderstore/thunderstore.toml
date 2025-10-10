@@ -26,3 +26,7 @@ target = "BepInEx/plugins/CustomPosters/CustomPosters.dll"
 [[build.copy]]
 source = "./CHANGELOG.md"
 target = "/"
+
+[[build.copy]]
+source = "../Plugin/CustomPosters/bin/Release/netstandard2.1/customposters"
+target = "customposters"

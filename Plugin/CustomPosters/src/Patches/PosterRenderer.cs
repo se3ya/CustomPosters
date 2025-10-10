@@ -42,7 +42,7 @@ namespace CustomPosters
                 _videoPlayer.url = "file://" + videoPath;
                 _videoPlayer.renderMode = VideoRenderMode.RenderTexture;
                 _videoPlayer.targetTexture = _renderTexture;
-                var (volume, maxDistance, aspectRatio) = PosterConfig.GetFileAudioSettings(videoPath);
+                var (volume, maxDistance, aspectRatio) = Plugin.ModConfig.GetFileAudioSettings(videoPath);
                 _videoPlayer.aspectRatio = ConvertAspectRatio(aspectRatio);
                 _videoPlayer.isLooping = true;
                 _videoPlayer.playOnAwake = false;
@@ -75,7 +75,7 @@ namespace CustomPosters
                     player.Play();
                 };
 
-                if (PosterConfig.EnableVideoAudio.Value)
+                if (Plugin.ModConfig.EnableVideoAudio.Value)
                 {
                     _videoPlayer.controlledAudioTrackCount = 1;
                     _videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
@@ -120,7 +120,7 @@ namespace CustomPosters
 
         private void Update()
         {
-            if (_audioSource != null && !PosterConfig.EnableVideoAudio.Value)
+            if (_audioSource != null && !Plugin.ModConfig.EnableVideoAudio.Value)
             {
                 if (_audioSource.isPlaying)
                 {

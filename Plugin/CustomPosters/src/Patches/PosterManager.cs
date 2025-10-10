@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CustomPosters.Data; // <-- IMPORTANT: Add this using statement
+using CustomPosters.Data;
 using UnityEngine;
 
 namespace CustomPosters
@@ -12,7 +12,6 @@ namespace CustomPosters
     {
         private static bool _materialsUpdated = false;
         private static string? _selectedPack = null;
-        private static Material? _copiedMaterial = null;
         private static readonly List<GameObject> CreatedPosters = new List<GameObject>();
         private static int _sessionMapSeed = 0;
         private static bool _sessionSeedInitialized = false;
@@ -30,22 +29,17 @@ namespace CustomPosters
         {
             _materialsUpdated = false;
 
-            if (!Plugin.Service.IsBiggerShipInstalled)
-            {
-                CopyPlane001Material();
-            }
-
             if (IsNewLobby)
             {
                 if (!_sessionSeedInitialized)
                 {
-                    _sessionMapSeed = PosterConfig.PerSession.Value ? StartOfRound.Instance.randomMapSeed : Environment.TickCount;
+                    _sessionMapSeed = Plugin.ModConfig.PerSession.Value ? StartOfRound.Instance.randomMapSeed : Environment.TickCount;
                     _sessionSeedInitialized = true;
                     Plugin.Log.LogDebug($"Initialized session with map seed: {_sessionMapSeed}");
                 }
 
                 int seedToUse;
-                if (PosterConfig.PerSession.Value)
+                if (Plugin.ModConfig.PerSession.Value)
                 {
                     seedToUse = _sessionMapSeed;
                 }
@@ -103,25 +97,6 @@ namespace CustomPosters
             }
         }
 
-        private static void CopyPlane001Material()
-        {
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-            if (posterPlane == null)
-            {
-                Plugin.Log.LogError("Poster plane Plane.001 not found under HangarShip");
-                return;
-            }
-
-            var originalRenderer = posterPlane.GetComponent<MeshRenderer>();
-            if (originalRenderer == null || originalRenderer.materials.Length == 0)
-            {
-                Plugin.Log.LogError("Poster plane renderer or materials not found");
-                return;
-            }
-
-            _copiedMaterial = new Material(originalRenderer.material);
-        }
-
         private static void HideVanillaPosterPlane()
         {
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
@@ -154,12 +129,14 @@ namespace CustomPosters
 
         private static GameObject CreatePoster()
         {
-            var newPoster = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            if (newPoster == null)
+            if (AssetManager.PosterPrefab == null)
             {
-                Plugin.Log.LogError("Failed to create new poster GameObject");
+                Plugin.Log.LogError("Cannot create poster because PosterPrefab is not loaded.");
+                return null!;
             }
-            return newPoster!;
+
+            var newPoster = UnityEngine.Object.Instantiate(AssetManager.PosterPrefab);
+            return newPoster;
         }
         
         private static IEnumerator CreateCustomPostersAsync()
@@ -179,13 +156,9 @@ namespace CustomPosters
 
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
             
-            // --- THIS IS THE BIG CHANGE ---
-            // All the hardcoded positions and complex if-statements have been removed.
-            // We now get the correct layout with one simple line from our new provider class.
             var posterData = PosterLayoutProvider.GetLayout();
-            // ------------------------------
             
-            var enabledPacks = Plugin.Service.PosterFolders.Where(folder => PosterConfig.IsPackEnabled(folder)).ToList();
+            var enabledPacks = Plugin.Service.PosterFolders.Where(folder => Plugin.ModConfig.IsPackEnabled(folder)).ToList();
             if (enabledPacks.Count == 0)
             {
                 Plugin.Log.LogWarning("No enabled packs found");
@@ -199,11 +172,11 @@ namespace CustomPosters
             var enabledPackNames = enabledPacks.Select(pack => Path.GetFileName(pack)).ToList();
 
             List<string> packsToUse;
-            if (PosterConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
+            if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
             {
-                if (!PosterConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
+                if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
                 {
-                    var packChances = enabledPacks.Select(p => PosterConfig.GetPackChance(p)).ToList();
+                    var packChances = enabledPacks.Select(p => Plugin.ModConfig.GetPackChance(p)).ToList();
                     if (packChances.Any(c => c > 0))
                     {
                         var totalChance = packChances.Sum();
@@ -231,7 +204,7 @@ namespace CustomPosters
             }
             else
             {
-                if (!PosterConfig.PerSession.Value)
+                if (!Plugin.ModConfig.PerSession.Value)
                 {
                     _selectedPack = null;
                 }
@@ -261,7 +234,7 @@ namespace CustomPosters
                 foreach (var path in pathsToCheck)
                 {
                     var files = Directory.GetFiles(path)
-                        .Where(f => validExtensions.Contains(Path.GetExtension(f).ToLower()) && PosterConfig.IsFileEnabled(f))
+                        .Where(f => validExtensions.Contains(Path.GetExtension(f).ToLower()) && Plugin.ModConfig.IsFileEnabled(f))
                         .Select(f => Path.GetFullPath(f).Replace('\\', '/'))
                         .ToList();
 
@@ -315,7 +288,7 @@ namespace CustomPosters
             {
                 if (kvp.Value.Count > 1)
                 {
-                    var fileChances = kvp.Value.Select(t => PosterConfig.GetFileChance(t.filePath)).ToList();
+                    var fileChances = kvp.Value.Select(t => Plugin.ModConfig.GetFileChance(t.filePath)).ToList();
                     if (fileChances.Any(c => c > 0))
                     {
                         var totalChance = fileChances.Sum();
@@ -351,7 +324,7 @@ namespace CustomPosters
             {
                 if (kvp.Value.Count > 1)
                 {
-                    var fileChances = kvp.Value.Select(v => PosterConfig.GetFileChance(v)).ToList();
+                    var fileChances = kvp.Value.Select(v => Plugin.ModConfig.GetFileChance(v)).ToList();
                     if (fileChances.Any(c => c > 0))
                     {
                         var totalChance = fileChances.Sum();
@@ -411,11 +384,12 @@ namespace CustomPosters
                 poster.transform.localScale = posterData[i].Scale;
 
                 var posterKey = posterData[i].Name.ToLower();
-                if (prioritizedContent.TryGetValue(posterKey, out var content) && PosterConfig.IsFileEnabled(content.filePath))
+                if (prioritizedContent.TryGetValue(posterKey, out var content) && Plugin.ModConfig.IsFileEnabled(content.filePath))
                 {
                     var renderer = poster.AddComponent<PosterRenderer>();
                     var (texture, filePath, isVideo) = content;
-                    renderer.Initialize(texture, isVideo ? filePath : null, _copiedMaterial);
+                    var posterMeshRenderer = poster.GetComponent<MeshRenderer>();
+                    renderer.Initialize(texture, isVideo ? filePath : null, posterMeshRenderer?.material);
 
                     CreatedPosters.Add(poster);
                     anyPosterLoaded = true;
@@ -474,7 +448,7 @@ namespace CustomPosters
                 yield break;
             }
 
-            var enabledPacks = Plugin.Service.PosterFolders.Where(folder => PosterConfig.IsPackEnabled(folder)).ToList();
+            var enabledPacks = Plugin.Service.PosterFolders.Where(folder => Plugin.ModConfig.IsPackEnabled(folder)).ToList();
             if (enabledPacks.Count == 0)
             {
                 Plugin.Log.LogWarning("No enabled packs found");
@@ -482,9 +456,9 @@ namespace CustomPosters
             }
 
             List<string> packsToUse;
-            if (PosterConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
+            if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
             {
-                if (!PosterConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
+                if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
                 {
                     _selectedPack = enabledPacks[Plugin.Service.Rand.Next(enabledPacks.Count)];
                 }
@@ -506,7 +480,7 @@ namespace CustomPosters
                 foreach (var path in pathsToCheck)
                 {
                     var files = Directory.GetFiles(path)
-                        .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()) && PosterConfig.IsFileEnabled(f))
+                        .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()) && Plugin.ModConfig.IsFileEnabled(f))
                         .ToList();
 
                     foreach (var file in files)

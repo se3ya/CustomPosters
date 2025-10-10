@@ -304,7 +304,7 @@ namespace CustomPosters
 
         public Texture2D? GetCachedTexture(string filePath)
         {
-            if (!PosterConfig.EnableTextureCaching.Value) return null;
+            if (!Plugin.ModConfig.EnableTextureCaching.Value) return null;
             if (_textureCache.TryGetValue(filePath, out var texture))
             {
                 Plugin.Log.LogDebug($"Retrieved cached texture: {filePath}");
@@ -315,7 +315,7 @@ namespace CustomPosters
 
         public void CacheTexture(string filePath, Texture2D texture)
         {
-            if (!PosterConfig.EnableTextureCaching.Value) return;
+            if (!Plugin.ModConfig.EnableTextureCaching.Value) return;
             if (!_textureCache.ContainsKey(filePath))
             {
                 _textureCache[filePath] = texture;
@@ -324,7 +324,7 @@ namespace CustomPosters
 
         public string? GetCachedVideo(string filePath)
         {
-            if (!PosterConfig.EnableTextureCaching.Value) return null;
+            if (!Plugin.ModConfig.EnableTextureCaching.Value) return null;
             if (_videoCache.TryGetValue(filePath, out var videoPath))
             {
                 Plugin.Log.LogDebug($"Retrieved cached video: {filePath}");
@@ -335,7 +335,7 @@ namespace CustomPosters
 
         public void CacheVideo(string filePath)
         {
-            if (!PosterConfig.EnableTextureCaching.Value) return;
+            if (!Plugin.ModConfig.EnableTextureCaching.Value) return;
             if (!_videoCache.ContainsKey(filePath))
             {
                 if (!File.Exists(filePath))
@@ -365,7 +365,7 @@ namespace CustomPosters
         public List<string> GetEnabledPackNames()
         {
             var enabledPacks = PosterFolders
-            .Where(f => PosterConfig.IsPackEnabled(f))
+            .Where(f => Plugin.ModConfig.IsPackEnabled(f))
             .Select(f => Path.GetFullPath(f).Replace('\\', '/'))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
