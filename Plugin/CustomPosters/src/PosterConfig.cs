@@ -19,13 +19,6 @@ namespace CustomPosters
             PerPoster
         }
 
-        public static ConfigEntry<RandomizerMode> RandomizerModeSetting { get; set; } = null!;
-        public static ConfigEntry<bool> PerSession { get; set; } = null!;
-        public static ConfigEntry<bool> EnableTextureCaching { get; set; } = null!;
-        public static ConfigEntry<bool> EnableVideoAudio { get; set; } = null!;
-
-        private static ConfigFile configFile = null!;
-
         [Serializable]
         public enum VideoAspectRatio
         {
@@ -35,338 +28,222 @@ namespace CustomPosters
             NoScaling
         }
 
+        public static ConfigEntry<RandomizerMode> RandomizerModeSetting { get; private set; } = null!;
+        public static ConfigEntry<bool> PerSession { get; private set; } = null!;
+        public static ConfigEntry<bool> EnableTextureCaching { get; private set; } = null!;
+        public static ConfigEntry<bool> EnableVideoAudio { get; private set; } = null!;
+
+        private static ConfigFile _configFile = null!;
+        private static readonly Dictionary<string, string> _filePathToCleanPackNameCache = new Dictionary<string, string>();
+
         public static void Initialize(ManualLogSource logger, ConfigFile config)
         {
-            configFile = config;
-            configFile.SaveOnConfigSet = false;
+            _configFile = config;
+            _configFile.SaveOnConfigSet = false;
 
-            MigrateOldConfigEntries(logger, configFile.ConfigFilePath);
-
-            RandomizerModeSetting = configFile.Bind(
-                "Settings",
+            RandomizerModeSetting = _configFile.Bind(
+                "1. Settings",
                 "RandomizerMode",
                 RandomizerMode.PerPack,
                 "Controls how textures are randomized. PerPack: Selects one pack randomly for all posters. PerPoster: Randomizes textures for each poster from all enabled packs."
             );
 
-            PerSession = configFile.Bind(
-                "Settings",
+            PerSession = _configFile.Bind(
+                "1. Settings",
                 "PerSession",
                 false,
                 "When enabled, locks the randomization (PerPack or PerPoster) for the entire game session until the game is restarted. When disabled, randomization refreshes each time the lobby reloads."
             );
 
-            EnableTextureCaching = configFile.Bind(
-                "Settings",
+            EnableTextureCaching = _configFile.Bind(
+                "1. Settings",
                 "EnableTextureCaching",
                 false,
                 "If true, caches textures and video paths in memory to improve performance. Disable to reduce memory usage."
             );
 
-            EnableVideoAudio = configFile.Bind(
-                "Settings",
+            EnableVideoAudio = _configFile.Bind(
+                "1. Settings",
                 "EnableVideoAudio",
                 false,
                 "If true, enables audio playback for .mp4 poster videos. Disable to mute videos."
             );
 
-            var modFolderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "CustomPosters",
-                "seechela-CustomPosters"
-            };
+            int packCounter = 2;
 
-            foreach (var mod in Plugin.Service.PosterFolders)
+            foreach (var packPath in Plugin.Service.PosterFolders)
             {
                 try
                 {
-                    var modName = Path.GetFileName(mod);
-                    if (string.IsNullOrEmpty(modName) || modName.Equals("plugins", StringComparison.OrdinalIgnoreCase) || modFolderNames.Contains(modName))
+                    var fullPackName = Path.GetFileName(packPath);
+                    var cleanPackName = CleanPackName(fullPackName);
+                    if (string.IsNullOrEmpty(cleanPackName)) continue;
+
+                    var mainPackSection = $"{packCounter}. {cleanPackName}";
+                    var chancesPackSection = $"{packCounter}. {cleanPackName} - Chances";
+
+                    _configFile.Bind(mainPackSection, "Enabled", true, $"Enable or disable the {cleanPackName} pack");
+                    _configFile.Bind(chancesPackSection, "Global chance", 0, new ConfigDescription($"Chance of selecting the {cleanPackName} pack in PerPack randomization mode [0-100]. Set to 0 to use equal probability with other packs.", new AcceptableValueRange<int>(0, 100)));
+
+                    var allFiles = GetFilesFromPack(packPath);
+                    foreach (var filePath in allFiles)
                     {
-                        continue;
-                    }
+                        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+                        var fileExt = Path.GetExtension(filePath).TrimStart('.').ToUpper();
+                        var originalFileName = Path.GetFileName(filePath);
 
-                    configFile.Bind(modName, "Enabled", true, $"Enable or disable the {modName} pack");
-                    configFile.Bind(
-                        modName,
-                        "Chance",
-                        0,
-                        new ConfigDescription(
-                            $"Chance of selecting the {modName} pack in PerPack randomization mode [0-100]. Set to 0 to use equal probability with other packs.",
-                            new AcceptableValueRange<int>(0, 100)
-                        )
-                    );
+                        var formattedKey = $"{fileNameWithoutExt}-{fileExt}";
 
-                    var postersPath = Path.Combine(mod, "posters");
-                    var tipsPath = Path.Combine(mod, "tips");
-                    var customPostersFolder = Path.Combine(mod, "CustomPosters");
-                    var nestedPostersPath = Path.Combine(customPostersFolder, "posters");
-                    var nestedTipsPath = Path.Combine(customPostersFolder, "tips");
+                        _configFile.Bind(mainPackSection, formattedKey, true, $"Enable or disable poster file {originalFileName} in pack {cleanPackName}");
 
-                    var posterPaths = new[] { postersPath, nestedPostersPath }.Where(Directory.Exists);
-                    foreach (var path in posterPaths)
-                    {
-                        var posterFiles = Directory.GetFiles(path)
-                            .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()))
-                            .ToList();
-                        foreach (var file in posterFiles)
+                        _configFile.Bind(chancesPackSection, $"{formattedKey} Chance", 0, new ConfigDescription($"Chance of selecting poster {originalFileName} in PerPoster randomization mode [0-100]. Set to 0 to use equal probability with other posters.", new AcceptableValueRange<int>(0, 100)));
+
+                        if (fileExt == "MP4")
                         {
-                            var fileName = Path.GetFileName(file);
-                            configFile.Bind(modName, fileName, true, $"Enable or disable poster file {fileName} in pack {modName}");
-                            configFile.Bind(
-                                modName,
-                                $"{fileName}.Chance",
-                                0,
-                                new ConfigDescription(
-                                    $"Chance of selecting poster {fileName} in PerPoster randomization mode [0-100]. Set to 0 to use equal probability with other posters.",
-                                    new AcceptableValueRange<int>(0, 100)
-                                )
-                            );
-                            if (Path.GetExtension(file).ToLower() == ".mp4")
-                            {
-                                configFile.Bind(
-                                    modName,
-                                    $"{fileName}.Volume",
-                                    20,
-                                    new ConfigDescription(
-                                        $"Volume for video {fileName} (0-100).",
-                                        new AcceptableValueRange<int>(0, 100)
-                                    )
-                                );
-                                configFile.Bind(
-                                    modName,
-                                    $"{fileName}.MaxDistance",
-                                    4.0f,
-                                    new ConfigDescription(
-                                        $"Maximum distance for audio playback of video {fileName} (1.0-5.0).",
-                                        new AcceptableValueRange<float>(1.0f, 5.0f)
-                                    )
-                                );
-                                configFile.Bind(
-                                    modName,
-                                    $"{fileName}.AspectRatio",
-                                    VideoAspectRatio.Stretch,
-                                    $"Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
-                                );
-                            }
+                            _configFile.Bind(mainPackSection, $"{formattedKey} Volume", 20, new ConfigDescription($"Volume for video {originalFileName} (0-100).", new AcceptableValueRange<int>(0, 100)));
+                            _configFile.Bind(mainPackSection, $"{formattedKey} MaxDistance", 4.0f, new ConfigDescription($"Maximum distance for audio playback of video {originalFileName} (1.0-5.0).", new AcceptableValueRange<float>(1.0f, 5.0f)));
+                            _configFile.Bind(mainPackSection, $"{formattedKey} AspectRatio", VideoAspectRatio.Stretch, $"Aspect ratio mode for video {originalFileName}.");
                         }
                     }
-
-                    var tipPaths = new[] { tipsPath, nestedTipsPath }.Where(Directory.Exists);
-                    foreach (var path in tipPaths)
-                    {
-                        var tipFiles = Directory.GetFiles(path)
-                            .Where(f => new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" }.Contains(Path.GetExtension(f).ToLower()))
-                            .ToList();
-                        foreach (var file in tipFiles)
-                        {
-                            var fileName = Path.GetFileName(file);
-                            configFile.Bind(modName, fileName, true, $"Enable or disable tip file {fileName} in pack {modName}");
-                            configFile.Bind(
-                                modName,
-                                $"{fileName}.Chance",
-                                0,
-                                new ConfigDescription(
-                                    $"Chance of selecting tip {fileName} in PerPoster randomization mode [0-100]. Set to 0 to use equal probability with other tips.",
-                                    new AcceptableValueRange<int>(0, 100)
-                                )
-                            );
-                            if (Path.GetExtension(file).ToLower() == ".mp4")
-                            {
-                                configFile.Bind(
-                                    modName,
-                                    $"{fileName}.Volume",
-                                    20,
-                                    new ConfigDescription(
-                                        $"Volume for video {fileName} (0-100).",
-                                        new AcceptableValueRange<int>(0, 100)
-                                    )
-                                );
-                                configFile.Bind(
-                                    modName,
-                                    $"{fileName}.MaxDistance",
-                                    4.0f,
-                                    new ConfigDescription(
-                                        $"Maximum distance for audio playback of video {fileName} (1.0-5.0).",
-                                        new AcceptableValueRange<float>(1.0f, 5.0f)
-                                    )
-                                );
-                                configFile.Bind(
-                                    modName,
-                                    $"{fileName}.AspectRatio",
-                                    VideoAspectRatio.Stretch,
-                                    $"Aspect ratio mode for video {fileName}. Options: Stretch, FitInside, FitOutside, NoScaling."
-                                );
-                            }
-                        }
-                    }
+                    packCounter++;
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError($"Failed to parse mod path {mod}: {ex.Message}");
+                    logger.LogError($"Failed to generate config for pack at {packPath}: {ex.Message}");
                 }
             }
 
             ClearOrphanedEntries();
-            configFile.Save();
-            configFile.SaveOnConfigSet = true;
+            _configFile.Save();
+            _configFile.SaveOnConfigSet = true;
         }
 
-        private static string? GetModNameFromFilePath(string filePath)
+        private static string CleanPackName(string fullPackName)
         {
-            string normalizedFilePath = Path.GetFullPath(filePath).Replace('\\', '/').ToLower();
-
-            string? mod = Plugin.Service.PosterFolders.FirstOrDefault(f =>
+            int dashIndex = fullPackName.IndexOf('-');
+            if (dashIndex > 0 && dashIndex < fullPackName.Length - 1)
             {
-                string normalizedPackPath = Path.GetFullPath(f).Replace('\\', '/').ToLower();
-                string normalizedCustomPostersPath = Path.Combine(normalizedPackPath, "CustomPosters").Replace('\\', '/');
-                return normalizedFilePath.Contains(normalizedPackPath) || normalizedFilePath.Contains(normalizedCustomPostersPath);
+                return fullPackName.Substring(dashIndex + 1);
+            }
+            return fullPackName;
+        }
+
+        private static IEnumerable<string> GetFilesFromPack(string packPath)
+        {
+            var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
+            var allFiles = new List<string>();
+
+            var pathsToCheck = new[] { "posters", "tips", "CustomPosters/posters", "CustomPosters/tips" }
+                .Select(subDir => Path.Combine(packPath, subDir));
+
+            foreach (var path in pathsToCheck)
+            {
+                if (Directory.Exists(path))
+                {
+                    allFiles.AddRange(Directory.GetFiles(path).Where(f => validExtensions.Contains(Path.GetExtension(f).ToLower())));
+                }
+            }
+            return allFiles.Distinct();
+        }
+
+        private static string? GetCleanPackNameFromFilePath(string filePath)
+        {
+            if (_filePathToCleanPackNameCache.TryGetValue(filePath, out var cachedName))
+            {
+                return cachedName;
+            }
+
+            string normalizedFilePath = Path.GetFullPath(filePath).Replace('\\', '/');
+            string? foundPackPath = Plugin.Service.PosterFolders.FirstOrDefault(packPath =>
+            {
+                string normalizedPackPath = Path.GetFullPath(packPath).Replace('\\', '/');
+                return normalizedFilePath.StartsWith(normalizedPackPath, StringComparison.OrdinalIgnoreCase);
             });
 
-            return mod != null ? Path.GetFileName(mod) : null;
-        }
-
-        public static (int volume, float maxDistance, VideoAspectRatio aspectRatio) GetFileAudioSettings(string filePath)
-        {
-            string fileName = Path.GetFileName(filePath);
-            
-            string? modName = GetModNameFromFilePath(filePath);
-
-            if (modName == null)
+            if (foundPackPath != null)
             {
-                return (30, 4.0f, VideoAspectRatio.Stretch);
+                var cleanName = CleanPackName(Path.GetFileName(foundPackPath));
+                _filePathToCleanPackNameCache[filePath] = cleanName;
+                return cleanName;
             }
 
-            int volume = configFile.Bind(
-                modName,
-                $"{fileName}.Volume",
-                20,
-                new ConfigDescription("", new AcceptableValueRange<int>(0, 100))
-            ).Value;
-            float maxDistance = configFile.Bind(
-                modName,
-                $"{fileName}.MaxDistance",
-                4.0f,
-                new ConfigDescription("", new AcceptableValueRange<float>(1.0f, 5.0f))
-            ).Value;
-            VideoAspectRatio aspectRatio = configFile.Bind(
-                modName,
-                $"{fileName}.AspectRatio",
-                VideoAspectRatio.Stretch
-            ).Value;
-            return (volume, maxDistance, aspectRatio);
-        }
-
-        private static void MigrateOldConfigEntries(ManualLogSource logger, string configPath)
-        {
-            if (!File.Exists(configPath)) return;
-
-            try
-            {
-                var config = new ConfigFile(configPath, false);
-                var entriesToMigrate = new List<(ConfigDefinition oldDef, ConfigDefinition newDef, bool value)>();
-
-                foreach (var entry in config)
-                {
-                    var section = entry.Key.Section;
-                    var key = entry.Key.Key;
-
-                    if (key.StartsWith("Poster_", StringComparison.OrdinalIgnoreCase) || key.StartsWith("Tip_", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var newKey = key.StartsWith("Poster_") ? key.Substring(7) : key.Substring(4);
-                        var oldDef = new ConfigDefinition(section, key);
-                        var newDef = new ConfigDefinition(section, newKey);
-                        var value = (bool)entry.Value.BoxedValue;
-                        entriesToMigrate.Add((oldDef, newDef, value));
-                    }
-                }
-
-                foreach (var (oldDef, newDef, value) in entriesToMigrate)
-                {
-                    config.Bind(newDef, value, new ConfigDescription($"Migrated from {oldDef.Key}"));
-                    config.Remove(oldDef);
-                }
-
-                if (entriesToMigrate.Count > 0)
-                {
-                    config.Save();
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError($"Failed to migrate old config entries: {ex.Message}");
-            }
+            return null;
         }
 
         public static bool IsPackEnabled(string packPath)
         {
-            string modName = Path.GetFileName(packPath);
-            if (string.IsNullOrEmpty(modName))
-            {
-                return false;
-            }
-            bool isEnabled = configFile.Bind(modName, "Enabled", true).Value;
-            Plugin.Log.LogDebug($"Pack {modName} enabled - {isEnabled}");
-            return isEnabled;
+            var cleanPackName = CleanPackName(Path.GetFileName(packPath));
+            if (string.IsNullOrEmpty(cleanPackName)) return false;
+            
+            return _configFile.Bind(cleanPackName, "Enabled", true).Value;
         }
 
         public static int GetPackChance(string packPath)
         {
-            string modName = Path.GetFileName(packPath);
-            if (string.IsNullOrEmpty(modName))
-            {
-                return 0;
-            }
-            int chance = configFile.Bind(modName, "Chance", 0, new ConfigDescription("", new AcceptableValueRange<int>(0, 100))).Value;
-            return chance;
+            var cleanPackName = CleanPackName(Path.GetFileName(packPath));
+            if (string.IsNullOrEmpty(cleanPackName)) return 0;
+
+            var chancesPackSection = $"{cleanPackName} - Chances";
+            return _configFile.Bind(chancesPackSection, "Global chance", 0).Value;
         }
 
         public static bool IsFileEnabled(string filePath)
         {
-            string fileName = Path.GetFileName(filePath);
+            var cleanPackName = GetCleanPackNameFromFilePath(filePath);
+            if (string.IsNullOrEmpty(cleanPackName)) return false;
             
-            string? modName = GetModNameFromFilePath(filePath);
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            var fileExt = Path.GetExtension(filePath).TrimStart('.').ToUpper();
+            var formattedKey = $"{fileNameWithoutExt}-{fileExt}";
 
-            if (modName == null)
-            {
-                return false;
-            }
-
-            bool isPackEnabled = configFile.Bind(modName, "Enabled", true).Value;
-            if (!isPackEnabled)
-            {
-                return false;
-            }
-
-            return configFile.Bind(modName, fileName, true).Value;
+            return _configFile.Bind(cleanPackName, formattedKey, true).Value;
         }
 
         public static int GetFileChance(string filePath)
         {
-            string fileName = Path.GetFileName(filePath);
+            var cleanPackName = GetCleanPackNameFromFilePath(filePath);
+            if (string.IsNullOrEmpty(cleanPackName)) return 0;
 
-            string? modName = GetModNameFromFilePath(filePath);
+            var chancesPackSection = $"{cleanPackName} - Chances";
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            var fileExt = Path.GetExtension(filePath).TrimStart('.').ToUpper();
+            var formattedKey = $"{fileNameWithoutExt}-{fileExt}";
 
-            if (modName == null)
+            return _configFile.Bind(chancesPackSection, $"{formattedKey} - Chance", 0).Value;
+        }
+
+        public static (int volume, float maxDistance, VideoAspectRatio aspectRatio) GetFileAudioSettings(string filePath)
+        {
+            var cleanPackName = GetCleanPackNameFromFilePath(filePath);
+            if (string.IsNullOrEmpty(cleanPackName))
             {
-                return 0;
+                return (20, 4.0f, VideoAspectRatio.Stretch);
             }
 
-            return configFile.Bind(
-                modName,
-                $"{fileName}.Chance",
-                0,
-                new ConfigDescription("", new AcceptableValueRange<int>(0, 100))
-            ).Value;
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(filePath);
+            var fileExt = Path.GetExtension(filePath).TrimStart('.').ToUpper();
+            var formattedKey = $"{fileNameWithoutExt}-{fileExt}";
+
+            int volume = _configFile.Bind(cleanPackName, $"{formattedKey} - Volume", 20).Value;
+            float maxDistance = _configFile.Bind(cleanPackName, $"{formattedKey} - MaxDistance", 4.0f).Value;
+            VideoAspectRatio aspectRatio = _configFile.Bind(cleanPackName, $"{formattedKey} - AspectRatio", VideoAspectRatio.Stretch).Value;
+            
+            return (volume, maxDistance, aspectRatio);
         }
 
         private static void ClearOrphanedEntries()
         {
-            PropertyInfo? orphanedEntriesProp = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries");
-            if (orphanedEntriesProp != null)
+            try
             {
-                var orphanedEntries = (Dictionary<ConfigDefinition, string>?)orphanedEntriesProp.GetValue(configFile);
-                orphanedEntries?.Clear();
+                PropertyInfo? orphanedEntriesProp = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries");
+                if (orphanedEntriesProp != null && orphanedEntriesProp.GetValue(_configFile) is Dictionary<ConfigDefinition, string> orphanedEntries)
+                {
+                    orphanedEntries.Clear();
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"Could not clear orphaned config entries: {ex.Message}");
             }
         }
     }
