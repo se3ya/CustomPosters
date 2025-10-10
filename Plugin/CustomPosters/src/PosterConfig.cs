@@ -10,7 +10,6 @@ using HarmonyLib;
 
 namespace CustomPosters
 {
-    // A helper class to store all config entries for a single poster file
     internal class FileConfig
     {
         public ConfigEntry<bool> Enabled { get; }
@@ -26,29 +25,24 @@ namespace CustomPosters
         }
     }
 
-    // This is the main config class, structured like the CodeRebirth example
     public class PosterConfig
     {
-        // Enums remain the same
         [Serializable]
         public enum RandomizerMode { PerPack, PerPoster }
         [Serializable]
         public enum VideoAspectRatio { Stretch, FitInside, FitOutside, NoScaling }
 
-        // General settings are now properties
         public ConfigEntry<RandomizerMode> RandomizerModeSetting { get; private set; } = null!;
         public ConfigEntry<bool> PerSession { get; private set; } = null!;
         public ConfigEntry<bool> EnableTextureCaching { get; private set; } = null!;
         public ConfigEntry<bool> EnableVideoAudio { get; private set; } = null!;
         
-        // Dictionaries to store the dynamically generated ConfigEntry objects
         private readonly Dictionary<string, ConfigEntry<bool>> _packEnabledEntries = new();
         private readonly Dictionary<string, ConfigEntry<int>> _packChanceEntries = new();
         private readonly Dictionary<string, FileConfig> _fileConfigs = new();
         
         private readonly ConfigFile _configFile;
 
-        // The constructor takes the ConfigFile instance
         public PosterConfig(ConfigFile config)
         {
             _configFile = config;

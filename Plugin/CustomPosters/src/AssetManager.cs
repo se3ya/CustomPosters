@@ -26,7 +26,7 @@ namespace CustomPosters
             
             if (PosterPrefab == null)
             {
-                Plugin.Log.LogError("Failed to load 'CustomPosterPrefab' from the AssetBundle.");
+                Plugin.Log.LogError("Failed to load prefab from the AssetBundle.");
             }
             else
             {
