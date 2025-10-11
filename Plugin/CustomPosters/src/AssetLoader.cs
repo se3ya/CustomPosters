@@ -13,8 +13,9 @@ namespace CustomPosters
         {
             var assembly = Assembly.GetExecutingAssembly();
             var assetDir = Path.GetDirectoryName(assembly.Location);
-
-            Bundle = AssetBundle.LoadFromFile(Path.Combine(assetDir, "customposters"));
+            var bundlePath = Path.Combine(assetDir, "customposters");
+            
+            Bundle = AssetBundle.LoadFromFile(bundlePath);
 
             if (Bundle == null)
             {
@@ -30,7 +31,7 @@ namespace CustomPosters
             }
             else
             {
-                Plugin.Log.LogInfo("Loaded PosterPrefab.");
+                Plugin.Log.LogInfo("Loaded assetbundle.");
             }
         }
     }

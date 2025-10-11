@@ -46,19 +46,8 @@ namespace CustomPosters
                         continue;
                     }
 
-                    var postersPath = Path.Combine(folder, "posters").Replace('\\', '/').ToLower();
-                    var tipsPath = Path.Combine(folder, "tips").Replace('\\', '/').ToLower();
-                    var customPostersFolder = Path.Combine(folder, "CustomPosters");
-                    var nestedPostersPath = Path.Combine(customPostersFolder, "posters").Replace('\\', '/').ToLower();
-                    var nestedTipsPath = Path.Combine(customPostersFolder, "tips").Replace('\\', '/').ToLower();
-
-                    if (Directory.Exists(postersPath) || Directory.Exists(tipsPath) ||
-                        Directory.Exists(nestedPostersPath) || Directory.Exists(nestedTipsPath))
+                    if (IsValidPosterPack(folder))
                     {
-                        if (Directory.Exists(folder))
-                        {
-                            var subDirs = Directory.GetDirectories(folder).Select(Path.GetFileName);
-                        }
                         _posterFolders.Add(folder);
                     }
                 }
@@ -72,6 +61,26 @@ namespace CustomPosters
             InitializeWiderShipMod();
             Initialize2StoryShipMod();
             SetRandomSeed(Environment.TickCount);
+        }
+
+        private bool IsValidPosterPack(string folderPath)
+        {
+            var pathsToCheck = new[] { "posters", "tips", "CustomPosters/posters", "CustomPosters/tips" }
+                .Select(subDir => Path.Combine(folderPath, subDir));
+
+            foreach (var path in pathsToCheck)
+            {
+                if (Directory.Exists(path))
+                {
+                    if (Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly)
+                                 .Any(file => _validExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private void InitializeShipWindows()

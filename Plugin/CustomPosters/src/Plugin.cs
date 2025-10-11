@@ -1,5 +1,6 @@
 using BepInEx;
 using BepInEx.Logging;
+using CustomPosters.Patches;
 using HarmonyLib;
 
 namespace CustomPosters
@@ -33,8 +34,8 @@ namespace CustomPosters
             ModConfig.Initialize();
 
             Log.LogDebug("Applying patches");
-            _harmony.PatchAll(typeof(GameLifecyclePatches));
-            Log.LogDebug("Patches applied successfully");
+            _harmony.PatchAll(typeof(StartOfRoundPatch));
+            _harmony.PatchAll(typeof(GameNetworkManagerPatch));
 
             Log.LogInfo($"{MyPluginInfo.PLUGIN_NAME} is loaded!");
         }

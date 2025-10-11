@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added .mp4 support.
   - Added a config option to enable or disable the audio of the poster *mp4* *[ default is false ]* 
   - Added a config option for each .mp4 poster to change the max volume distance of the video *[ default is 4 ]* 
-  - Added a config option for each .mp4 poster to change the aspect ratio of the video *[ default is 4 ]* 
+  - Added a config option for each .mp4 poster to change the aspect ratio of the video *[ default is Stretch ]* 
   - Added a config option for each .mp4 poster to change the volume of the video *[ default is false ]* 
 
 ### Changed
@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored and reorganized the entire codebase.
 
 ### Fixed
-- Poster positions with *2StoryShipMod*.
+- Fixed poster positions with *2StoryShipMod*.
+- Fixed poster packs disabled in a mod manager still showing up in the config.
 
 ## [2.0.0] - 2025-06-09 - "Major update"
 ### Added
