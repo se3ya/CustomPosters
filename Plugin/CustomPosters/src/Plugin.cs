@@ -33,7 +33,7 @@ namespace CustomPosters
             
             ModConfig.Initialize();
 
-            Log.LogDebug("Applying patches");
+            Log.LogInfo("Applying patches");
             _harmony.PatchAll(typeof(StartOfRoundPatch));
             _harmony.PatchAll(typeof(GameNetworkManagerPatch));
 

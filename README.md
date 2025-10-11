@@ -30,9 +30,7 @@
 
 - Overrides the vanilla posters in the ship with your own images.
 - Supports multiple poster packs. 
-- Ability to adjust posters, enable/disable packs and posters, change chances of the packs and posters, change volume, max distance and aspect ratio of `.mp4` posters via config file.
-- If any custom poster fails to load, the mod will disable that poster at all.
-  - If you have more than 2 poster mods and first poster don't load, it will try to load second poster instead.
+- Ability to enable/disable packs and posters, change chances of the packs and posters, change volume, max distance and aspect ratio of `.mp4` posters via config file.
 - Compatible with **ShipWindows**, **2 sToRy ShIp** and **WiderShipMod**.
 - Optimized to prevent texture leaking.
 - [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**.
@@ -82,8 +80,8 @@ _<p><small>Poster image names must match the structure below.</small></p>_
   - *True*: Randomized posters only when restarting the game.
 - **Enable/Disable Packs and Posters**:
   - Each poster pack has an `Enabled` setting for poster pack and posters. Set to `false` to disable a pack or a poster.
-- **Per-Pack Chance**:
-  - Assign a `Chance` value (0–100) for each pack. If any pack has a `Chance > 0`, weighted random selection is used.
+- **Global Chance**:
+  - Assign a `Global Chance` value (0–100) for each pack. If any pack has a `Global Chance > 0`, weighted random selection is used.
   - A `Chance = 0` excludes the pack from selection, reverting to equal probability among enabled packs with non-zero chances.
 - **Per-Poster Chance**:
   - For each poster in a pack, set a probability (0–100). If any poster has a `Chance > 0`, weighted selection applies.
@@ -95,8 +93,8 @@ _<p><small>Poster image names must match the structure below.</small></p>_
 - **Aspect ratio**:
   - Choose aspect ratio of `.mp4` posters *[ Stretch 'X', FitInside, FitOutside, NoScaling ]*.
 - **TextureCaching**:
-  - *Enabled (Default)*: Stores textures in memory for faster access, reducing disk reads.
-  - *Disabled*: Loads textures from disk each time, which may slightly increase load times (based on image size).
+  - *Enabled*: Stores textures in memory for faster access, reducing disk reads.
+  - *Disabled (Default)*: Loads textures from disk each time, which may slightly increase load times (based on image size).
 
 ---
 
@@ -112,7 +110,8 @@ Yes, the mod is compatible with **ShipWindows**, **2 sToRy ShIp**, and **WiderSh
 Yes, but for best results, use the recommended sizes listed in the [Adding Custom Posters](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#recommended-poster-sizes--in-pixels-) section.
 
 ### **Q: What happens if a poster fails to load?**
-*CustomPosters* disables that poster that didn't load and tries to choose poster that is enabled in other pack. If all posters didn't load, *CustomPosters* falls back to the vanilla poster or another enabled poster from an enabled pack.
+If a specific poster file (like a .png or .mp4) can't be loaded, the mod will log an error in the game's console and that poster simply won't appear.
+In PerPoster mode, the mod will just pick another working poster from the available pool.
 
 ---
 
@@ -136,7 +135,7 @@ Yes, but for best results, use the recommended sizes listed in the [Adding Custo
 ---
 
 ## License
-Distributed under the GPL v3 License. See LICENSE.txt for more information
+Distributed under the GPL v3 License. See LICENSE.md for more information
 
 ---
 
