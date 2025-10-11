@@ -1,1 +1,4 @@
 - Spawn poster planes even faster.
+- Add additional posters for extend ship mods.
+- Save posters for save setting.
+- If there is 1 poster pack, make it's global chance 100%, if there is 2 and more poster packs, make their global chances equal.

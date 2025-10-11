@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace CustomPosters.Data.PosterLayouts
 {
-    internal static class TwoStoryShip_NoLeftWindow
+    internal static class TwoStoryShip_NoBothWindows
     {
         public static PosterData[] Get() => new PosterData[]
         {

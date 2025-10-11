@@ -70,7 +70,7 @@ namespace CustomPosters
                     var enabledEntry = _configFile.Bind(mainPackSection, "Enabled", true, $"Enable or disable the {cleanPackName} pack");
                     _packEnabledEntries[cleanPackName] = enabledEntry;
 
-                    var chanceEntry = _configFile.Bind(chancesPackSection, "Global chance", 0, new ConfigDescription($"...", new AcceptableValueRange<int>(0, 100)));
+                    var chanceEntry = _configFile.Bind(chancesPackSection, "Global chance", 0, new ConfigDescription($"Chance of selecting the {cleanPackName} pack in PerPack randomization mode [0-100]. Set to 0 to use equal probability with other packs", new AcceptableValueRange<int>(0, 100)));
                     _packChanceEntries[cleanPackName] = chanceEntry;
                     
                     var allFiles = GetFilesFromPack(packPath);
@@ -82,15 +82,15 @@ namespace CustomPosters
                         var formattedKey = $"{fileNameWithoutExt}-{fileExt}";
 
                         var fileEnabledEntry = _configFile.Bind(mainPackSection, formattedKey, true, $"Enable or disable poster file {originalFileName} in pack {cleanPackName}");
-                        var fileChanceEntry = _configFile.Bind(chancesPackSection, $"{formattedKey} Chance", 0, new ConfigDescription($"...", new AcceptableValueRange<int>(0, 100)));
+                        var fileChanceEntry = _configFile.Bind(chancesPackSection, $"{formattedKey} Chance", 0, new ConfigDescription($"Chance of selecting poster {originalFileName} in PerPoster randomization mode [0-100]. Set to 0 to use equal probability with other posters.", new AcceptableValueRange<int>(0, 100)));
 
                         var fileConfig = new FileConfig(fileEnabledEntry, fileChanceEntry);
 
                         if (fileExt == "MP4")
                         {
-                            fileConfig.Volume = _configFile.Bind(mainPackSection, $"{formattedKey} Volume", 20, new ConfigDescription($"...", new AcceptableValueRange<int>(0, 100)));
-                            fileConfig.MaxDistance = _configFile.Bind(mainPackSection, $"{formattedKey} MaxDistance", 4.0f, new ConfigDescription($"...", new AcceptableValueRange<float>(1.0f, 5.0f)));
-                            fileConfig.AspectRatio = _configFile.Bind(mainPackSection, $"{formattedKey} AspectRatio", VideoAspectRatio.Stretch, $"...");
+                            fileConfig.Volume = _configFile.Bind(mainPackSection, $"{formattedKey} Volume", 20, new ConfigDescription($"Volume for video {originalFileName} (0-100).", new AcceptableValueRange<int>(0, 100)));
+                            fileConfig.MaxDistance = _configFile.Bind(mainPackSection, $"{formattedKey} MaxDistance", 4.0f, new ConfigDescription($"Maximum distance for audio playback of video {originalFileName} (1.0-5.0)", new AcceptableValueRange<float>(1.0f, 5.0f)));
+                            fileConfig.AspectRatio = _configFile.Bind(mainPackSection, $"{formattedKey} AspectRatio", VideoAspectRatio.Stretch, $"Aspect ratio mode for video {originalFileName}. [Stretch] - Stretches video to fit poster area. [FitInside] - Fits video inside poster area without cropping. [FitOutside] - Fits video outside poster area, cropping if necessary. [NoScaling] - Uses original video size without scaling.");
                         }
                         
                         _fileConfigs[filePath] = fileConfig;

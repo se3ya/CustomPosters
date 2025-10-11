@@ -111,14 +111,14 @@ namespace CustomPosters
                         if (bool.TryParse(trimmedLine.Replace("1. Enabled = ", "").Trim(), out bool enabled))
                         {
                             IsWindow2Enabled = enabled;
-                            Plugin.Log.LogInfo($"ShipWindows Right Window Enabled - {IsWindow2Enabled}");
+                            Plugin.Log.LogInfo($"Detected ShipWindows, right window enabled - {IsWindow2Enabled}");
                             break;
                         }
                     }
                 }
                 if (!inRightWindowSection && !IsWindow2Enabled)
                 {
-                    Plugin.Log.LogDebug("Right Window section not found or disabled");
+                    Plugin.Log.LogDebug("Right Window section not found");
                 }
             }
             catch (Exception ex)
@@ -152,7 +152,7 @@ namespace CustomPosters
                 }
 
                 WiderShipExtendedSide = (string)extendedSideField.GetValue(null);
-                Plugin.Log.LogInfo($"WiderShipMod detected with Extended Side - {WiderShipExtendedSide}");
+                Plugin.Log.LogInfo($"Detected WiderShip, extended side - {WiderShipExtendedSide}");
             }
             catch (Exception)
             {
@@ -179,7 +179,7 @@ namespace CustomPosters
                     if (trimmedLine.StartsWith("Extended Side = ", StringComparison.OrdinalIgnoreCase))
                     {
                         WiderShipExtendedSide = trimmedLine.Substring("Extended Side = ".Length).Trim();
-                        Plugin.Log.LogInfo($"WiderShipMod detected with Extended Side - {WiderShipExtendedSide}");
+                        Plugin.Log.LogInfo($"Detected WiderShip, extended side - {WiderShipExtendedSide}");
                         return;
                     }
                 }
@@ -214,14 +214,14 @@ namespace CustomPosters
                 var leftWindowsField = storyShipType.GetField("EnableLeftWindows", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                 if (rightWindowsField == null || leftWindowsField == null)
                 {
-                    Plugin.Log.LogWarning("Failed to find EnableRightWindows or EnableLeftWindows fields in 2StoryShipConfig");
+                    Plugin.Log.LogWarning("Failed to find EnableRightWindows or EnableLeftWindows fields cfg");
                     Read2StoryShipConfigFile();
                     return;
                 }
 
                 EnableRightWindows = (bool)rightWindowsField.GetValue(null);
                 EnableLeftWindows = (bool)leftWindowsField.GetValue(null);
-                Plugin.Log.LogInfo($"2StoryShipMod detected. RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
             }
             catch (Exception)
             {
@@ -237,7 +237,7 @@ namespace CustomPosters
                 Plugin.Log.LogError("2StoryShipMod config file not found, defaulting RightWindows and LeftWindows to true");
                 EnableRightWindows = true;
                 EnableLeftWindows = true;
-                Plugin.Log.LogInfo($"2StoryShipMod detected. RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
                 return;
             }
 
@@ -270,19 +270,19 @@ namespace CustomPosters
 
                 if (!rightWindowsSet || !leftWindowsSet)
                 {
-                    Plugin.Log.LogWarning($"One or both window settings not found in 2StoryShipMod config, defaulting unset values to true");
+                    Plugin.Log.LogWarning($"One or both window settings not found in 2StoryShipMod cfg, defaulting unset values to true");
                     if (!rightWindowsSet) EnableRightWindows = true;
                     if (!leftWindowsSet) EnableLeftWindows = true;
                 }
 
-                Plugin.Log.LogInfo($"2StoryShipMod detected. RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
             }
             catch (Exception ex)
             {
                 Plugin.Log.LogError($"Failed to read 2StoryShipMod config: {ex.Message}, defaulting RightWindows and LeftWindows to true");
                 EnableRightWindows = true;
                 EnableLeftWindows = true;
-                Plugin.Log.LogInfo($"2StoryShipMod detected. RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
             }
         }
 
