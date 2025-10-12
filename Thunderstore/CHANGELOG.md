@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added BiggerShip compatibility.
 
+### Fixed
+- Fixed posters not being affected by lights and shadows.
+
 ## [3.0.0] - 2025-08-11 - "The Overhaul"
 ### Added
 - Added .mp4 support.

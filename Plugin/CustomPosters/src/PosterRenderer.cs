@@ -8,6 +8,7 @@ namespace CustomPosters
         private VideoPlayer? _videoPlayer;
         private AudioSource? _audioSource;
         private RenderTexture? _renderTexture;
+        private float _originalVolume;
 
         private static UnityEngine.Video.VideoAspectRatio ConvertAspectRatio(PosterConfig.VideoAspectRatio aspectRatio)
         {
@@ -25,13 +26,24 @@ namespace CustomPosters
         {
             if (materialTemplate == null)
             {
-                Plugin.Log.LogError("Cannot initialize poster, material template is null!");
+                Plugin.Log.LogError("Cannot initialize poster, material template is null.");
                 Destroy(gameObject);
                 return;
             }
 
             var renderer = GetComponent<MeshRenderer>();
             var material = new Material(materialTemplate);
+
+            Shader standardShader = Shader.Find("HDRP/Lit");
+            if (standardShader != null)
+            {
+                material.shader = standardShader;
+            }
+            else
+            {
+                Plugin.Log.LogWarning("Could not find HDRP/Lit shader.");
+            }
+            renderer.material = material;
 
             if (videoPath != null && System.IO.Path.GetExtension(videoPath).ToLower() == ".mp4")
             {
@@ -75,41 +87,25 @@ namespace CustomPosters
                     player.Play();
                 };
 
+                _originalVolume = volume / 100.0f;
+
                 if (Plugin.ModConfig.EnableVideoAudio.Value)
                 {
-                    _videoPlayer.controlledAudioTrackCount = 1;
                     _videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
                     _videoPlayer.SetTargetAudioSource(0, _audioSource);
-                    _audioSource.volume = volume / 100.0f;
-                    _audioSource.mute = false;
-                    for (ushort track = 0; track < _videoPlayer.audioTrackCount; track++)
-                    {
-                        _videoPlayer.EnableAudioTrack(track, true);
-                    }
+                    _audioSource.volume = _originalVolume;
                 }
                 else
                 {
-                    _videoPlayer.controlledAudioTrackCount = 0;
                     _videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
-                    _audioSource.Stop();
                     _audioSource.volume = 0f;
-                    _audioSource.mute = true;
-                    for (ushort track = 0; track < _videoPlayer.audioTrackCount; track++)
-                    {
-                        _videoPlayer.EnableAudioTrack(track, false);
-                    }
                 }
 
-                _videoPlayer.source = VideoSource.Url;
-                _videoPlayer.enabled = true;
-                _videoPlayer.Play();
-
-                renderer.material = material;
+                _videoPlayer.Prepare();
             }
             else if (texture != null)
             {
                 material.mainTexture = texture;
-                renderer.material = material;
             }
             else
             {
