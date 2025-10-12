@@ -12,6 +12,12 @@ namespace CustomPosters.Data
             string? widerShipSide = Plugin.Service.WiderShipExtendedSide;
             bool twoStoryShip = Plugin.Service.Is2StoryShipModInstalled;
 
+            if (Plugin.Service.IsBiggerShipInstalled)
+            {
+                Plugin.Log.LogInfo("Choosing layout: BiggerShip");
+                return BiggerShip.Get();
+            }
+
             if (twoStoryShip)
             {
                 if (shipWindows && widerShip && !Plugin.Service.IsWindow2Enabled)

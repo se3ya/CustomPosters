@@ -22,7 +22,7 @@ namespace CustomPosters
         {
             _sessionSeedInitialized = false;
             _sessionMapSeed = 0;
-            Plugin.Log.LogDebug("Reset session seed initialization");
+            Plugin.Log.LogDebug("Session randomization reset.");
         }
         
         public static void OnRoundStart(StartOfRound instance)
@@ -35,7 +35,7 @@ namespace CustomPosters
                 {
                     _sessionMapSeed = Plugin.ModConfig.PerSession.Value ? StartOfRound.Instance.randomMapSeed : Environment.TickCount;
                     _sessionSeedInitialized = true;
-                    Plugin.Log.LogDebug($"Initialized session with map seed: {_sessionMapSeed}");
+                    Plugin.Log.LogDebug($"Seed: {_sessionMapSeed}");
                 }
 
                 int seedToUse;
@@ -412,7 +412,7 @@ namespace CustomPosters
                 {
                     UnityEngine.Object.Destroy(vanillaPlane);
                 }
-                Plugin.Log.LogInfo("Custom posters created successfully");
+                Plugin.Log.LogInfo("Posters created successfully!");
             }
             else
             {

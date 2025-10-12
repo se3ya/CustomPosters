@@ -29,4 +29,4 @@ target = "/"
 
 [[build.copy]]
 source = "../Plugin/CustomPosters/bin/Release/netstandard2.1/customposters"
-target = "customposters"
+target = "BepInEx/plugins/CustomPosters/"

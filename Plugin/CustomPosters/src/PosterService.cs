@@ -16,6 +16,7 @@ namespace CustomPosters
         private System.Random _rand = null!;
         public IReadOnlyList<string> PosterFolders => _posterFolders.AsReadOnly();
 
+        public bool IsBiggerShipInstalled { get; private set; }
         public bool IsShipWindowsInstalled { get; private set; }
         public bool IsWindow2Enabled { get; private set; }
         public bool IsWiderShipModInstalled { get; private set; }
@@ -54,9 +55,10 @@ namespace CustomPosters
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError($"Failed to initialize PosterService: {ex.Message}");
+                Plugin.Log.LogError(ex.Message);
             }
 
+            InitializeBiggerShip();
             InitializeShipWindows();
             InitializeWiderShipMod();
             Initialize2StoryShipMod();
@@ -83,6 +85,16 @@ namespace CustomPosters
             return false;
         }
 
+        private void InitializeBiggerShip()
+        {
+            IsBiggerShipInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("BiggerShip");
+            if (IsBiggerShipInstalled)
+            {
+                Plugin.Log.LogInfo("Detected BiggerShip");
+                return;
+            }
+        }
+
         private void InitializeShipWindows()
         {
             IsShipWindowsInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("TestAccount666.ShipWindows");
@@ -94,7 +106,7 @@ namespace CustomPosters
             var configPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
             if (!File.Exists(configPath))
             {
-                Plugin.Log.LogWarning("ShipWindows config file not found");
+                Plugin.Log.LogWarning("ShipWindows cfg not found");
                 return;
             }
 
@@ -120,7 +132,7 @@ namespace CustomPosters
                         if (bool.TryParse(trimmedLine.Replace("1. Enabled = ", "").Trim(), out bool enabled))
                         {
                             IsWindow2Enabled = enabled;
-                            Plugin.Log.LogInfo($"Detected ShipWindows, right window enabled - {IsWindow2Enabled}");
+                            Plugin.Log.LogInfo($"Detected ShipWindows, Right Window - {IsWindow2Enabled}");
                             break;
                         }
                     }
@@ -132,7 +144,7 @@ namespace CustomPosters
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError($"Failed to read ShipWindows config: {ex.Message}");
+                Plugin.Log.LogError($"Failed to read ShipWindows cfg: {ex.Message}");
             }
         }
 
@@ -161,7 +173,7 @@ namespace CustomPosters
                 }
 
                 WiderShipExtendedSide = (string)extendedSideField.GetValue(null);
-                Plugin.Log.LogInfo($"Detected WiderShip, extended side - {WiderShipExtendedSide}");
+                Plugin.Log.LogInfo($"Detected WiderShip, ES - {WiderShipExtendedSide}");
             }
             catch (Exception)
             {
@@ -174,7 +186,7 @@ namespace CustomPosters
             var configPath = Path.Combine(Paths.ConfigPath, "mborsh.WiderShipMod.cfg");
             if (!File.Exists(configPath))
             {
-                Plugin.Log.LogError("WiderShipMod config file not found, defaulting ExtendedSide to 'Both'");
+                Plugin.Log.LogError("WiderShipMod cfg not found, defaulting ES to 'Both'");
                 WiderShipExtendedSide = "Both";
                 return;
             }
@@ -188,16 +200,16 @@ namespace CustomPosters
                     if (trimmedLine.StartsWith("Extended Side = ", StringComparison.OrdinalIgnoreCase))
                     {
                         WiderShipExtendedSide = trimmedLine.Substring("Extended Side = ".Length).Trim();
-                        Plugin.Log.LogInfo($"Detected WiderShip, extended side - {WiderShipExtendedSide}");
+                        Plugin.Log.LogInfo($"Detected WiderShip, ES - {WiderShipExtendedSide}");
                         return;
                     }
                 }
-                Plugin.Log.LogWarning("Extended Side not found in WiderShipMod config, defaulting to 'Both'");
+                Plugin.Log.LogWarning("ES not found in WiderShipMod cfg, defaulting to 'Both'");
                 WiderShipExtendedSide = "Both";
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError($"Failed to read WiderShipMod config: {ex.Message}, defaulting ExtendedSide to 'Both'");
+                Plugin.Log.LogError($"Failed to read WiderShipMod cfg: {ex.Message}, defaulting ES to 'Both'");
                 WiderShipExtendedSide = "Both";
             }
         }
@@ -223,14 +235,14 @@ namespace CustomPosters
                 var leftWindowsField = storyShipType.GetField("EnableLeftWindows", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                 if (rightWindowsField == null || leftWindowsField == null)
                 {
-                    Plugin.Log.LogWarning("Failed to find EnableRightWindows or EnableLeftWindows fields cfg");
+                    Plugin.Log.LogWarning("Failed to find EnableRightWindows or EnableLeftWindows fields in cfg");
                     Read2StoryShipConfigFile();
                     return;
                 }
 
                 EnableRightWindows = (bool)rightWindowsField.GetValue(null);
                 EnableLeftWindows = (bool)leftWindowsField.GetValue(null);
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
             }
             catch (Exception)
             {
@@ -243,10 +255,10 @@ namespace CustomPosters
             var configPath = Path.Combine(Paths.ConfigPath, "MelanieMelicious.2StoryShip.cfg");
             if (!File.Exists(configPath))
             {
-                Plugin.Log.LogError("2StoryShipMod config file not found, defaulting RightWindows and LeftWindows to true");
+                Plugin.Log.LogError("2StoryShipMod cfg not found, defaulting RW and LW to true");
                 EnableRightWindows = true;
                 EnableLeftWindows = true;
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
                 return;
             }
 
@@ -284,14 +296,14 @@ namespace CustomPosters
                     if (!leftWindowsSet) EnableLeftWindows = true;
                 }
 
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError($"Failed to read 2StoryShipMod config: {ex.Message}, defaulting RightWindows and LeftWindows to true");
+                Plugin.Log.LogError($"Failed to read 2StoryShipMod cfg: {ex.Message}, defaulting RW and LW to true");
                 EnableRightWindows = true;
                 EnableLeftWindows = true;
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RightWindows - {EnableRightWindows}, LeftWindows - {EnableLeftWindows}");
+                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
             }
         }
 
