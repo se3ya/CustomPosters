@@ -5,14 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.1.0] - 2025-08-12 - "Compatibility"
+## [3.1.0] - 2025-10-12 - "Compatibility"
 ### Added
 - Added BiggerShip compatibility.
 
 ### Fixed
 - Fixed posters not being affected by lights and shadows.
 
-## [3.0.0] - 2025-08-11 - "The Overhaul"
+## [3.0.0] - 2025-10-11 - "The Overhaul"
 ### Added
 - Added .mp4 support.
   - Added a config option to enable or disable the audio of the poster *mp4* *[ default is false ]* 
