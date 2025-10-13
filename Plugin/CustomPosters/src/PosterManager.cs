@@ -3,28 +3,49 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CustomPosters.Data;
+using System.Threading.Tasks;
+using Unity.Netcode;
 using UnityEngine;
+using CustomPosters.Data;
+using CustomPosters.Utils;
+using CustomPosters.Networking;
 
 namespace CustomPosters
 {
     internal static class PosterManager
     {
         private static bool _materialsUpdated = false;
-        private static string? _selectedPack = null;
+        internal static string? _selectedPack = null;
+        public static string? SelectedPack => _selectedPack;
         private static readonly List<GameObject> CreatedPosters = new List<GameObject>();
         private static int _sessionMapSeed = 0;
         private static bool _sessionSeedInitialized = false;
 
         public static bool IsNewLobby { get; set; } = true;
-        
+
         public static void ResetSession()
         {
             _sessionSeedInitialized = false;
             _sessionMapSeed = 0;
             Plugin.Log.LogDebug("Session randomization reset.");
         }
-        
+
+        public static void SetPackForClients(string packName)
+        {
+            if (NetworkManager.Singleton.IsHost) return;
+
+            Plugin.Log.LogInfo($"Client received selected pack from host: {PathUtils.GetPrettyPath(packName)}");
+            _selectedPack = packName;
+
+            _materialsUpdated = false;
+            StartOfRound instance = StartOfRound.Instance;
+            if (instance != null && instance.inShipPhase)
+            {
+                instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
+            }
+        }
+
+
         public static void OnRoundStart(StartOfRound instance)
         {
             _materialsUpdated = false;
@@ -59,31 +80,31 @@ namespace CustomPosters
             IsNewLobby = false;
         }
 
-        private static IEnumerator LoadTextureAsync(string filePath, Action<(Texture2D? texture, string? filePath)> onComplete)
+        private static async Task LoadTextureAsync(string filePath, Action<(Texture2D? texture, string? filePath)> onComplete)
         {
             try
             {
                 if (!File.Exists(filePath))
                 {
-                    Plugin.Log.LogError($"File not found: {filePath}");
+                    Plugin.Log.LogError($"File not found: {PathUtils.GetPrettyPath(filePath)}");
                     onComplete?.Invoke((null, null));
-                    yield break;
+                    return;
                 }
 
                 var cachedTexture = Plugin.Service.GetCachedTexture(filePath);
                 if (cachedTexture != null)
                 {
                     onComplete?.Invoke((cachedTexture, filePath));
-                    yield break;
+                    return;
                 }
 
-                var fileData = File.ReadAllBytes(filePath);
+                var fileData = await System.IO.File.ReadAllBytesAsync(filePath);
                 var texture = new Texture2D(2, 2);
                 if (!texture.LoadImage(fileData))
                 {
-                    Plugin.Log.LogError($"Failed to load texture from {filePath}");
+                    Plugin.Log.LogError($"Failed to load texture from {PathUtils.GetPrettyPath(filePath)}");
                     onComplete?.Invoke((null, null));
-                    yield break;
+                    return;
                 }
 
                 texture.filterMode = FilterMode.Point;
@@ -92,7 +113,7 @@ namespace CustomPosters
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError($"Error loading file {filePath}: {ex.Message}");
+                Plugin.Log.LogError($"Error loading file {PathUtils.GetPrettyPath(filePath)}: {ex.Message}");
                 onComplete?.Invoke((null, null));
             }
         }
@@ -138,6 +159,27 @@ namespace CustomPosters
             var newPoster = UnityEngine.Object.Instantiate(AssetManager.PosterPrefab);
             return newPoster;
         }
+
+        public static double? GetVideoTimeForPoster(string posterName)
+        {
+            var posterObject = CreatedPosters.FirstOrDefault(p => p.name == posterName);
+            if (posterObject != null)
+            {
+                var renderer = posterObject.GetComponent<PosterRenderer>();
+                return renderer?.GetCurrentVideoTime();
+            }
+            return null;
+        }
+
+        public static void SetVideoTimeForPoster(string posterName, double time)
+        {
+            var posterObject = CreatedPosters.FirstOrDefault(p => p.name == posterName);
+            if (posterObject != null)
+            {
+                var renderer = posterObject.GetComponent<PosterRenderer>();
+                renderer?.SetVideoTime(time);
+            }
+        }
         
         private static IEnumerator CreateCustomPostersAsync()
         {
@@ -174,42 +216,51 @@ namespace CustomPosters
             List<string> packsToUse;
             if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
             {
-                if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
+                if (NetworkManager.Singleton.IsHost)
                 {
-                    var packChances = enabledPacks.Select(p => Plugin.ModConfig.GetPackChance(p)).ToList();
-                    if (packChances.Any(c => c > 0))
+                    if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
                     {
-                        var totalChance = packChances.Sum();
-                        var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
-                        double cumulative = 0;
-                        for (int i = 0; i < enabledPacks.Count; i++)
+                        var packChances = enabledPacks.Select(p => Plugin.ModConfig.GetPackChance(p)).ToList();
+                        if (packChances.All(c => c == 0))
                         {
-                            cumulative += packChances[i];
-                            if (randomValue <= cumulative)
-                            {
-                                _selectedPack = enabledPacks[i];
-                                break;
-                            }
+                            _selectedPack = enabledPacks[Plugin.Service.Rand.Next(enabledPacks.Count)];
                         }
-                        _selectedPack ??= enabledPacks[0];
+                        else
+                        {
+                            var totalChance = packChances.Sum();
+                            var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
+                            double cumulative = 0;
+                            for (int i = 0; i < enabledPacks.Count; i++)
+                            {
+                                cumulative += packChances[i];
+                                if (randomValue <= cumulative)
+                                {
+                                    _selectedPack = enabledPacks[i];
+                                    break;
+                                }
+                            }
+                            _selectedPack ??= enabledPacks[0];
+                        }
                     }
-                    else
-                    {
-                        _selectedPack = enabledPacks[Plugin.Service.Rand.Next(enabledPacks.Count)];
-                    }
-                    var selectedPackName = Path.GetFileName(_selectedPack);
-                    Plugin.Log.LogInfo($"PerPack randomization enabled. Using pack: {selectedPackName}");
+                    PosterSyncManager.SendPacket(_selectedPack!);
                 }
-                packsToUse = new List<string> { _selectedPack! };
+
+                if (string.IsNullOrEmpty(_selectedPack))
+                {
+                    Plugin.Log.LogInfo("Client is waiting for host to select a pack...");
+                    yield break;
+                }
+
+                var selectedPackName = System.IO.Path.GetFileName(_selectedPack);
+                var shortPackName = PathUtils.GetPackName(selectedPackName);
+                Plugin.Log.LogInfo($"Using pack chosen by host: {shortPackName}");
+                packsToUse = new List<string> { _selectedPack };
             }
             else
             {
-                if (!Plugin.ModConfig.PerSession.Value)
-                {
-                    _selectedPack = null;
-                }
+                Plugin.Service.SetRandomSeed(StartOfRound.Instance.randomMapSeed);
                 packsToUse = enabledPacks;
-                Plugin.Log.LogInfo("PerPoster - true, combining enabled packs");
+                Plugin.Log.LogInfo("PerPoster mode enabled.");
             }
 
             var allTextures = new Dictionary<string, List<(Texture2D texture, string filePath)>>();
@@ -261,22 +312,25 @@ namespace CustomPosters
                         }
                         else
                         {
-                            yield return LoadTextureAsync(file, (result) =>
+                            (Texture2D? texture, string? filePath) textureResult = (null, null);
+
+                            var loadTask = LoadTextureAsync(file, result => textureResult = result);
+
+                            yield return new WaitUntil(() => loadTask.IsCompleted);
+
+                            if (textureResult.texture != null && textureResult.filePath != null)
                             {
-                                if (result.texture != null && result.filePath != null)
+                                var posterName = Path.GetFileNameWithoutExtension(textureResult.filePath).ToLower();
+                                if (!allTextures.ContainsKey(posterName))
                                 {
-                                    var posterName = Path.GetFileNameWithoutExtension(result.filePath).ToLower();
-                                    if (!allTextures.ContainsKey(posterName))
-                                    {
-                                        allTextures[posterName] = new List<(Texture2D, string)>();
-                                    }
-                                    allTextures[posterName].Add((result.texture, result.filePath));
+                                    allTextures[posterName] = new List<(Texture2D, string)>();
                                 }
-                                else
-                                {
-                                    Plugin.Log.LogWarning($"Failed to load texture from {file}");
-                                }
-                            });
+                                allTextures[posterName].Add((textureResult.texture, textureResult.filePath));
+                            }
+                            else
+                            {
+                                Plugin.Log.LogWarning($"Failed to load texture from {file}");
+                            }
                         }
                     }
                     yield return null;
@@ -385,10 +439,11 @@ namespace CustomPosters
                 var posterKey = posterData[i].Name.ToLower();
                 if (prioritizedContent.TryGetValue(posterKey, out var content) && Plugin.ModConfig.IsFileEnabled(content.filePath))
                 {
-                    var renderer = poster.AddComponent<PosterRenderer>();
-                    var (texture, filePath, isVideo) = content;
-                    var posterMeshRenderer = poster.GetComponent<MeshRenderer>();
-                    renderer.Initialize(texture, isVideo ? filePath : null, posterMeshRenderer?.material);
+                var renderer = poster.AddComponent<PosterRenderer>();
+                var (texture, filePath, isVideo) = content;
+                var posterMeshRenderer = poster.GetComponent<MeshRenderer>();
+
+                renderer.Initialize(texture, isVideo ? filePath : null, posterMeshRenderer?.material);
 
                     CreatedPosters.Add(poster);
                     anyPosterLoaded = true;
@@ -466,7 +521,7 @@ namespace CustomPosters
             Plugin.Log.LogInfo($"Changed poster pack to - {_selectedPack}");
 
             _materialsUpdated = false;
-            StartOfRound? instance = MonoBehaviour.FindObjectOfType<StartOfRound>();
+            StartOfRound? instance = StartOfRound.Instance;
             if (instance != null && instance.inShipPhase)
             {
                 instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Video;
+using CustomPosters.Utils;
 
 namespace CustomPosters
 {
@@ -79,12 +80,16 @@ namespace CustomPosters
 
                 _videoPlayer.errorReceived += (player, message) =>
                 {
-                    Plugin.Log.LogError($"VideoPlayer error for {videoPath}: {message}");
+                    Plugin.Log.LogError($"VideoPlayer error for {PathUtils.GetPrettyPath(videoPath)}: {message}");
                 };
                 _videoPlayer.prepareCompleted += (player) =>
                 {
-                    Plugin.Log.LogDebug($"Video prepared successfully: {videoPath}");
                     player.Play();
+
+                    if (!Unity.Netcode.NetworkManager.Singleton.IsHost)
+                    {
+                        Networking.PosterSyncManager.RequestVideoTimeFromServer(gameObject.name);
+                    }
                 };
 
                 _originalVolume = volume / 100.0f;
@@ -112,6 +117,23 @@ namespace CustomPosters
                 Plugin.Log.LogError($"No valid texture or video for poster: {gameObject.name}");
                 Destroy(gameObject);
             }
+        }
+
+        public void SetVideoTime(double time)
+        {
+            if (_videoPlayer != null && _videoPlayer.isPrepared)
+            {
+                _videoPlayer.time = time;
+            }
+        }
+
+        public double? GetCurrentVideoTime()
+        {
+            if (_videoPlayer != null && _videoPlayer.isPlaying)
+            {
+                return _videoPlayer.time;
+            }
+            return null;
         }
 
         private void Update()

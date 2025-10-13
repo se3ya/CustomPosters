@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using BepInEx;
 using UnityEngine;
+using CustomPosters.Utils;
 
 namespace CustomPosters
 {
@@ -317,7 +318,7 @@ namespace CustomPosters
             if (!Plugin.ModConfig.EnableTextureCaching.Value) return null;
             if (_textureCache.TryGetValue(filePath, out var texture))
             {
-                Plugin.Log.LogDebug($"Retrieved cached texture: {filePath}");
+                Plugin.Log.LogDebug($"Retrieved cached texture: {PathUtils.GetPrettyPath(filePath)}");
                 return texture;
             }
             return null;
@@ -337,7 +338,7 @@ namespace CustomPosters
             if (!Plugin.ModConfig.EnableTextureCaching.Value) return null;
             if (_videoCache.TryGetValue(filePath, out var videoPath))
             {
-                Plugin.Log.LogDebug($"Retrieved cached video: {filePath}");
+                Plugin.Log.LogDebug($"Retrieved cached video: {PathUtils.GetPrettyPath(filePath)}");
                 return videoPath;
             }
             return null;
@@ -350,11 +351,11 @@ namespace CustomPosters
             {
                 if (!File.Exists(filePath))
                 {
-                    Plugin.Log.LogError($"Cannot cache video, file does not exist: {filePath}");
+                    Plugin.Log.LogError($"Cannot cache video, file does not exist: {PathUtils.GetPrettyPath(filePath)}");
                     return;
                 }
                 _videoCache[filePath] = filePath;
-                Plugin.Log.LogDebug($"Cached video: {filePath}");
+                Plugin.Log.LogDebug($"Cached video: {PathUtils.GetPrettyPath(filePath)}");
             }
         }
 

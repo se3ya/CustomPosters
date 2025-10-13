@@ -1,4 +1,7 @@
 using HarmonyLib;
+using CustomPosters.Networking;
+using Unity.Netcode;
+
 
 namespace CustomPosters.Patches
 {
@@ -10,6 +13,11 @@ namespace CustomPosters.Patches
         private static void OnStartPatch()
         {
             PosterManager.ResetSession();
+
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback += PosterSyncManager.OnClientConnected;
+            }
         }
 
         [HarmonyPostfix]

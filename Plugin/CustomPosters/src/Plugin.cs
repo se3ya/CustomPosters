@@ -1,11 +1,13 @@
 using BepInEx;
 using BepInEx.Logging;
 using CustomPosters.Patches;
+using CustomPosters.Networking;
 using HarmonyLib;
 
 namespace CustomPosters
 {
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
+    [BepInDependency("LethalNetworkAPI")]
     [BepInDependency("TestAccount666.ShipWindows", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("MelanieMelicious.2StoryShip", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("mborsh.WiderShipMod", BepInDependency.DependencyFlags.SoftDependency)]

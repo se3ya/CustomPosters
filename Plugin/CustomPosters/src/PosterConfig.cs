@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using BepInEx.Configuration;
 using HarmonyLib;
+using CustomPosters.Utils;
 
 namespace CustomPosters
 {
@@ -99,7 +100,7 @@ namespace CustomPosters
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.LogError($"Failed to generate config for pack at {packPath}: {ex.Message}");
+                    Plugin.Log.LogError($"Failed to generate config for pack at {PathUtils.GetPrettyPath(packPath)}: {ex.Message}");
                 }
             }
             
@@ -160,12 +161,7 @@ namespace CustomPosters
 
         private static string PackName(string fullPackName)
         {
-            int dashIndex = fullPackName.IndexOf('-');
-            if (dashIndex > 0 && dashIndex < fullPackName.Length - 1)
-            {
-                return fullPackName.Substring(dashIndex + 1);
-            }
-            return fullPackName;
+            return PathUtils.GetPackName(fullPackName);
         }
 
         private static IEnumerable<string> GetFilesFromPack(string packPath)
