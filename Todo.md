@@ -1,2 +1,3 @@
 - Add additional posters for extend ship mods.
 - Save posters for save setting.
+- Client side option.
