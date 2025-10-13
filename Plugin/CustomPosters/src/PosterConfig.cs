@@ -31,6 +31,7 @@ namespace CustomPosters
         [Serializable]
         public enum VideoAspectRatio { Stretch, FitInside, FitOutside, NoScaling }
 
+        public ConfigEntry<bool> EnableNetworking { get; private set; } = null!;
         public ConfigEntry<RandomizerMode> RandomizerModeSetting { get; private set; } = null!;
         public ConfigEntry<bool> PerSession { get; private set; } = null!;
         public ConfigEntry<bool> EnableTextureCaching { get; private set; } = null!;
@@ -51,6 +52,7 @@ namespace CustomPosters
         {
             _configFile.SaveOnConfigSet = false;
 
+            EnableNetworking = _configFile.Bind("1. Settings", "Enable Networking", true, "If true, posters are synced with all players (requires all players to have the mod). If false, the mod is client-side only and your posters may differ from other players.");
             RandomizerModeSetting = _configFile.Bind("1. Settings", "RandomizerMode", RandomizerMode.PerPack, "Controls how textures are randomized. PerPack: Selects one pack randomly for all posters. PerPoster: Randomizes textures for each poster from all enabled packs.");
             PerSession = _configFile.Bind("1. Settings", "PerSession", false, "When enabled, locks the randomization (PerPack or PerPoster) for the entire game session until the game is restarted. When disabled, randomization refreshes each time the lobby reloads.");
             EnableTextureCaching = _configFile.Bind("1. Settings", "EnableTextureCaching", false, "If true, caches textures and video paths in memory to improve performance. Disable to reduce memory usage.");

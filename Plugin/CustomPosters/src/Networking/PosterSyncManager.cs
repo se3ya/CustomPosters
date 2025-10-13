@@ -27,32 +27,63 @@ namespace CustomPosters.Networking
         
         public static void SendPacket(string packName)
         {
+            if (!Plugin.ModConfig.EnableNetworking.Value)
+            {
+                Plugin.Log.LogDebug("Networking disabled.");
+                return;
+            }
+
+            if (NetworkManager.Singleton == null)
+            {
+                Plugin.Log.LogWarning("NetworkManager.Singleton is null, cannot send pack sync");
+                return;
+            }
+
             if (NetworkManager.Singleton.IsHost)
             {
-                Plugin.Log.LogInfo($"[Sync] Host is sending selected pack to all clients: {PathUtils.GetPrettyPath(packName)}");
+                Plugin.Log.LogInfo($"[Host] Sending selected pack to all clients: {PathUtils.GetPrettyPath(packName)}");
                 SyncPackMessage.SendClients(packName);
             }
         }
         
         public static void OnClientConnected(ulong clientId)
         {
+            if (!Plugin.ModConfig.EnableNetworking.Value)
+            {
+                return;
+            }
+
+            if (NetworkManager.Singleton == null)
+            {
+                Plugin.Log.LogWarning("NetworkManager.Singleton is null in OnClientConnected");
+                return;
+            }
+
             if (NetworkManager.Singleton.IsHost && clientId != NetworkManager.Singleton.LocalClientId)
             {
                 if (!string.IsNullOrEmpty(PosterManager.SelectedPack))
                 {
-                    Plugin.Log.LogInfo($"[Sync] New client joined. Sending them the selected pack: {PathUtils.GetPrettyPath(PosterManager.SelectedPack)}");
+                    Plugin.Log.LogInfo($"[Host] New client joined, sending pack: {PathUtils.GetPrettyPath(PosterManager.SelectedPack)}");
                     SyncPackMessage.SendClient(PosterManager.SelectedPack, clientId);
                 }
             }
-        }
+    }
 
         public static void RequestVideoTimeFromServer(string posterName)
         {
-            if (!NetworkManager.Singleton.IsHost)
+            if (!Plugin.ModConfig.EnableNetworking.Value)
             {
-                Plugin.Log.LogDebug($"[Sync] Client requesting video time for poster: {posterName}");
-                RequestVideoTimeMessage.SendServer(posterName);
+                Plugin.Log.LogDebug("Networking disabled, skipping video time sync request");
+                return;
             }
+
+            if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsHost)
+            {
+                return;
+            }
+
+            Plugin.Log.LogDebug($"[Client] Requesting video time for poster: {posterName}");
+            RequestVideoTimeMessage.SendServer(posterName);
         }
 
         private static void OnVideoTimeRequested(string posterName, ulong clientId)

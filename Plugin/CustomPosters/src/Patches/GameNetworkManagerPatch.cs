@@ -2,7 +2,6 @@ using HarmonyLib;
 using CustomPosters.Networking;
 using Unity.Netcode;
 
-
 namespace CustomPosters.Patches
 {
     [HarmonyPatch(typeof(GameNetworkManager))]
@@ -14,9 +13,21 @@ namespace CustomPosters.Patches
         {
             PosterManager.ResetSession();
 
-            if (NetworkManager.Singleton != null)
+            if (Plugin.ModConfig.EnableNetworking.Value)
             {
-                NetworkManager.Singleton.OnClientConnectedCallback += PosterSyncManager.OnClientConnected;
+                if (NetworkManager.Singleton != null)
+                {
+                    Plugin.Log.LogInfo("Networking enabled - registering callbacks.");
+                    NetworkManager.Singleton.OnClientConnectedCallback += PosterSyncManager.OnClientConnected;
+                }
+                else
+                {
+                    Plugin.Log.LogWarning("NetworkManager.Singleton is null, cannot register callbacks.");
+                }
+            }
+            else
+            {
+                Plugin.Log.LogInfo("Networking is disabled.");
             }
         }
 

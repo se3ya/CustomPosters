@@ -86,7 +86,7 @@ namespace CustomPosters
                 {
                     player.Play();
 
-                    if (!Unity.Netcode.NetworkManager.Singleton.IsHost)
+                    if (Plugin.ModConfig.EnableNetworking.Value && Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsHost)
                     {
                         Networking.PosterSyncManager.RequestVideoTimeFromServer(gameObject.name);
                     }

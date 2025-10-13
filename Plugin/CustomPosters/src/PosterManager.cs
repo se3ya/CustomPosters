@@ -23,15 +23,20 @@ namespace CustomPosters
 
         public static bool IsNewLobby { get; set; } = true;
 
+        private static bool ShouldActAsHost => !Plugin.ModConfig.EnableNetworking.Value || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost);
+
         public static void ResetSession()
         {
             _sessionSeedInitialized = false;
             _sessionMapSeed = 0;
+            _selectedPack = null;
             Plugin.Log.LogDebug("Session randomization reset.");
         }
 
         public static void SetPackForClients(string packName)
         {
+            if (!Plugin.ModConfig.EnableNetworking.Value) return;
+            if (NetworkManager.Singleton == null) return;
             if (NetworkManager.Singleton.IsHost) return;
 
             Plugin.Log.LogInfo($"Client received selected pack from host: {PathUtils.GetPrettyPath(packName)}");
@@ -45,10 +50,14 @@ namespace CustomPosters
             }
         }
 
-
         public static void OnRoundStart(StartOfRound instance)
         {
             _materialsUpdated = false;
+
+            if (!ShouldActAsHost) 
+            {
+                return;
+            }
 
             if (IsNewLobby)
             {
@@ -120,65 +129,44 @@ namespace CustomPosters
 
         private static void HideVanillaPosterPlane()
         {
-            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)");
-            if (posterPlane != null)
-            {
-                posterPlane.SetActive(false);
-                return;
-            }
-
-            posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-            if (posterPlane != null)
-            {
-                posterPlane.SetActive(false);
-            }
+            var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001 (Old)") ?? GameObject.Find("Environment/HangarShip/Plane.001");
+            posterPlane?.SetActive(false);
         }
 
         private static void CleanUpPosters()
         {
             foreach (var poster in CreatedPosters)
             {
-                if (poster != null)
-                {
-                    var renderer = poster.GetComponent<PosterRenderer>();
-                    if (renderer != null) UnityEngine.Object.Destroy(renderer);
-                    UnityEngine.Object.Destroy(poster);
-                }
+                if (poster == null) continue;
+        
+                var renderer = poster.GetComponent<PosterRenderer>();
+                if (renderer != null) UnityEngine.Object.Destroy(renderer);
+                UnityEngine.Object.Destroy(poster);
             }
             CreatedPosters.Clear();
         }
 
-        private static GameObject CreatePoster()
+        private static GameObject? CreatePoster()
         {
             if (AssetManager.PosterPrefab == null)
             {
                 Plugin.Log.LogError("Cannot create poster because PosterPrefab is not loaded.");
-                return null!;
+                return null;
             }
 
-            var newPoster = UnityEngine.Object.Instantiate(AssetManager.PosterPrefab);
-            return newPoster;
+            return UnityEngine.Object.Instantiate(AssetManager.PosterPrefab);
         }
 
         public static double? GetVideoTimeForPoster(string posterName)
         {
             var posterObject = CreatedPosters.FirstOrDefault(p => p.name == posterName);
-            if (posterObject != null)
-            {
-                var renderer = posterObject.GetComponent<PosterRenderer>();
-                return renderer?.GetCurrentVideoTime();
-            }
-            return null;
+            return posterObject?.GetComponent<PosterRenderer>()?.GetCurrentVideoTime();
         }
 
         public static void SetVideoTimeForPoster(string posterName, double time)
         {
             var posterObject = CreatedPosters.FirstOrDefault(p => p.name == posterName);
-            if (posterObject != null)
-            {
-                var renderer = posterObject.GetComponent<PosterRenderer>();
-                renderer?.SetVideoTime(time);
-            }
+            posterObject?.GetComponent<PosterRenderer>()?.SetVideoTime(time);
         }
         
         private static IEnumerator CreateCustomPostersAsync()
@@ -216,7 +204,9 @@ namespace CustomPosters
             List<string> packsToUse;
             if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
             {
-                if (NetworkManager.Singleton.IsHost)
+                bool shouldSelectPack = !Plugin.ModConfig.EnableNetworking.Value || NetworkManager.Singleton.IsHost;
+
+                if (shouldSelectPack)
                 {
                     if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
                     {
@@ -242,13 +232,25 @@ namespace CustomPosters
                             _selectedPack ??= enabledPacks[0];
                         }
                     }
-                    PosterSyncManager.SendPacket(_selectedPack!);
+        
+                    if (Plugin.ModConfig.EnableNetworking.Value)
+                    {
+                        PosterSyncManager.SendPacket(_selectedPack!);
+                    }
                 }
 
                 if (string.IsNullOrEmpty(_selectedPack))
                 {
-                    Plugin.Log.LogInfo("Client is waiting for host to select a pack...");
-                    yield break;
+                    if (Plugin.ModConfig.EnableNetworking.Value)
+                    {
+                        Plugin.Log.LogInfo("Client is waiting for host to select a pack...");
+                        yield break;
+                    }
+                    else
+                    {
+                        Plugin.Log.LogError("Pack selection failed in client-side only mode");
+                        yield break;
+                    }
                 }
 
                 var selectedPackName = System.IO.Path.GetFileName(_selectedPack);
