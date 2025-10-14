@@ -27,12 +27,13 @@
 ---
 
 ## Features
-
 - Overrides the vanilla posters in the ship with your own images.
-- Supports multiple poster packs. 
-- Ability to enable/disable packs and posters, change chances of the packs and posters, change volume, max distance and aspect ratio of `.mp4` posters via config file.
-- Compatible with **ShipWindows**, **2 sToRy ShIp** and **WiderShipMod**.
-- Optimized to prevent texture leaking.
+- Supports multiple poster packs at once.
+- Supports most of the image formats and `.mp4` video format.
+- Ability to enable/disable packs and posters, change chances of the packs and posters, toggleable networking, change volume, max distance and aspect ratio of `.mp4` posters via config file.
+- Compatible with **ShipWindows**, **2 sToRy ShIp**, **BiggerShip**, and **WiderShipMod**.
+- Posters and video playback is synchronized with clients.
+- Maximum optimization.
 - [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**.
   - *Sizes of the posters will be slightly incorrect after cropping!*
 
@@ -71,7 +72,8 @@ _<p><small>Poster image names must match the structure below.</small></p>_
 ---
 
 ## Configuration Options
-
+- **Enable Networking**:
+  - If true (default), posters are synced with all players. If false, the mod is client-side only, allowing to play vanilla lobby.
 - **Randomier mode**:
   - *PerPack (default)*: Selects one pack randomly for all posters.
   - *PerPoster*: Randomizes textures for each poster from all enabled packs.
@@ -99,7 +101,6 @@ _<p><small>Poster image names must match the structure below.</small></p>_
 ---
 
 ## FAQ
-
 ### **Q: Can I use multiple poster packs at the same time?**
 Yes! The mod supports multiple poster packs. You can configure poster packs in the config.
 
@@ -124,6 +125,9 @@ In PerPoster mode, the mod will just pick another working poster from the availa
 
 ### Default Poster (Plane.001) is Still Visible
 - This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled.
+
+### Why can't I join vanilla lobbies? 
+- Mod uses networking that conflicts with vanilla lobbies. To join vanilla lobbies, disable the "Enable Networking" option in the configs.
 
 ---
 
