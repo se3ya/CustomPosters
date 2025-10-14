@@ -168,10 +168,11 @@ namespace CustomPosters
 
         private static IEnumerable<string> GetFilesFromPack(string packPath)
         {
-            var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
+            var validExtensions = Constants.AllValidExtensions;
             var allFiles = new List<string>();
-            var pathsToCheck = new[] { "posters", "tips", "CustomPosters/posters", "CustomPosters/tips" }
+            var pathsToCheck = Constants.PosterPackSubdirectories
                 .Select(subDir => Path.Combine(packPath, subDir));
+
             foreach (var path in pathsToCheck)
             {
                 if (Directory.Exists(path))

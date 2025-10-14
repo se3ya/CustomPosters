@@ -1,3 +1,5 @@
 - Add additional posters for extend ship mods.
 - Save posters for save setting.
-- Client side option.
+- Re-create vanilla poster models and make it as default.
+  - Make an improved vanilla poster models as an option.
+  - Make Quad posters (planes) as an option.

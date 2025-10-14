@@ -204,35 +204,15 @@ namespace CustomPosters
             List<string> packsToUse;
             if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
             {
-                bool shouldSelectPack = !Plugin.ModConfig.EnableNetworking.Value || NetworkManager.Singleton.IsHost;
+                bool shouldSelectPack = ShouldActAsHost;
 
                 if (shouldSelectPack)
                 {
                     if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
                     {
-                        var packChances = enabledPacks.Select(p => Plugin.ModConfig.GetPackChance(p)).ToList();
-                        if (packChances.All(c => c == 0))
-                        {
-                            _selectedPack = enabledPacks[Plugin.Service.Rand.Next(enabledPacks.Count)];
-                        }
-                        else
-                        {
-                            var totalChance = packChances.Sum();
-                            var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
-                            double cumulative = 0;
-                            for (int i = 0; i < enabledPacks.Count; i++)
-                            {
-                                cumulative += packChances[i];
-                                if (randomValue <= cumulative)
-                                {
-                                    _selectedPack = enabledPacks[i];
-                                    break;
-                                }
-                            }
-                            _selectedPack ??= enabledPacks[0];
-                        }
+                        _selectedPack = PackSelector.SelectPackByChance(enabledPacks);
                     }
-        
+
                     if (Plugin.ModConfig.EnableNetworking.Value)
                     {
                         PosterSyncManager.SendPacket(_selectedPack!);
@@ -241,21 +221,12 @@ namespace CustomPosters
 
                 if (string.IsNullOrEmpty(_selectedPack))
                 {
-                    if (Plugin.ModConfig.EnableNetworking.Value)
-                    {
-                        Plugin.Log.LogInfo("Client is waiting for host to select a pack...");
-                        yield break;
-                    }
-                    else
-                    {
-                        Plugin.Log.LogError("Pack selection failed in client-side only mode");
-                        yield break;
-                    }
+                    Plugin.Log.LogInfo(Plugin.ModConfig.EnableNetworking.Value ? "Client is waiting for host to select a pack..." : "Pack selection failed in client-side only mode");
+                    yield break;
                 }
 
-                var selectedPackName = System.IO.Path.GetFileName(_selectedPack);
-                var shortPackName = PathUtils.GetPackName(selectedPackName);
-                Plugin.Log.LogInfo($"Using pack chosen by host: {shortPackName}");
+                var shortPackName = PathUtils.GetPackName(Path.GetFileName(_selectedPack));
+                Plugin.Log.LogInfo($"Using pack: {shortPackName}");
                 packsToUse = new List<string> { _selectedPack };
             }
             else
@@ -339,77 +310,27 @@ namespace CustomPosters
                 }
             }
 
-            var prioritizedContent = new Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)>();
+            var prioritizedContent = new Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)>();       
+            // prioritize textures
             foreach (var kvp in allTextures)
             {
-                if (kvp.Value.Count > 1)
-                {
-                    var fileChances = kvp.Value.Select(t => Plugin.ModConfig.GetFileChance(t.filePath)).ToList();
-                    if (fileChances.Any(c => c > 0))
-                    {
-                        var totalChance = fileChances.Sum();
-                        var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
-                        double cumulative = 0;
-                        for (int i = 0; i < kvp.Value.Count; i++)
-                        {
-                            cumulative += fileChances[i];
-                            if (randomValue <= cumulative)
-                            {
-                                prioritizedContent[kvp.Key] = (kvp.Value[i].texture, kvp.Value[i].filePath, false);
-                                break;
-                            }
-                        }
-                        if (!prioritizedContent.ContainsKey(kvp.Key))
-                        {
-                            prioritizedContent[kvp.Key] = (kvp.Value[0].texture, kvp.Value[0].filePath, false);
-                        }
-                    }
-                    else
-                    {
-                        var selected = kvp.Value.OrderBy(t => Plugin.Service.GetFilePriority(t.filePath)).First();
-                        prioritizedContent[kvp.Key] = (selected.texture, selected.filePath, false);
-                    }
-                }
-                else
-                {
-                    prioritizedContent[kvp.Key] = (kvp.Value[0].texture, kvp.Value[0].filePath, false);
-                }
+                var selected = PackSelector.SelectContentByChance(
+                    kvp.Value,
+                    t => Plugin.ModConfig.GetFileChance(t.filePath),
+                    t => Plugin.Service.GetFilePriority(t.filePath)
+                );
+                prioritizedContent[kvp.Key] = (selected.texture, selected.filePath, false);
             }
 
+            // prioritize videos
             foreach (var kvp in allVideos)
             {
-                if (kvp.Value.Count > 1)
-                {
-                    var fileChances = kvp.Value.Select(v => Plugin.ModConfig.GetFileChance(v)).ToList();
-                    if (fileChances.Any(c => c > 0))
-                    {
-                        var totalChance = fileChances.Sum();
-                        var randomValue = Plugin.Service.Rand.NextDouble() * totalChance;
-                        double cumulative = 0;
-                        for (int i = 0; i < kvp.Value.Count; i++)
-                        {
-                            cumulative += fileChances[i];
-                            if (randomValue <= cumulative)
-                            {
-                                prioritizedContent[kvp.Key] = (null, kvp.Value[i], true);
-                                break;
-                            }
-                        }
-                        if (!prioritizedContent.ContainsKey(kvp.Key))
-                        {
-                            prioritizedContent[kvp.Key] = (null, kvp.Value[0], true);
-                        }
-                    }
-                    else
-                    {
-                        var selected = kvp.Value.OrderBy(v => Plugin.Service.GetFilePriority(v)).First();
-                        prioritizedContent[kvp.Key] = (null, selected, true);
-                    }
-                }
-                else
-                {
-                    prioritizedContent[kvp.Key] = (null, kvp.Value[0], true);
-                }
+                var selected = PackSelector.SelectContentByChance(
+                    kvp.Value,
+                    v => Plugin.ModConfig.GetFileChance(v),
+                    v => Plugin.Service.GetFilePriority(v)
+                );
+                prioritizedContent[kvp.Key] = (null, selected, true);
             }
 
             if (allTextures.Count == 0 && allVideos.Count == 0)

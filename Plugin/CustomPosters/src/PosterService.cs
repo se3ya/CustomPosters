@@ -13,7 +13,6 @@ namespace CustomPosters
         private readonly List<string> _posterFolders = new List<string>();
         private readonly Dictionary<string, Texture2D> _textureCache = new Dictionary<string, Texture2D>();
         private readonly Dictionary<string, string> _videoCache = new Dictionary<string, string>();
-        private readonly string[] _validExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
         private System.Random _rand = null!;
         public IReadOnlyList<string> PosterFolders => _posterFolders.AsReadOnly();
 
@@ -34,16 +33,12 @@ namespace CustomPosters
             try
             {
                 var pluginPath = Paths.PluginPath;
-                var modFolderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "CustomPosters",
-                    "seechela-CustomPosters"
-                };
+                var modFolderNames = new HashSet<string>(Constants.ExcludedModFolderNames, StringComparer.OrdinalIgnoreCase);
 
                 foreach (var folder in Directory.GetDirectories(pluginPath))
                 {
                     var folderName = Path.GetFileName(folder);
-                    if (folderName.Equals("plugins", StringComparison.OrdinalIgnoreCase) || modFolderNames.Contains(folderName))
+                    if (modFolderNames.Contains(folderName))
                     {
                         continue;
                     }
@@ -56,7 +51,7 @@ namespace CustomPosters
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError(ex.Message);
+                Plugin.Log.LogError($"Error scanning for poster packs: {ex.Message}");
             }
 
             InitializeBiggerShip();
@@ -68,18 +63,16 @@ namespace CustomPosters
 
         private bool IsValidPosterPack(string folderPath)
         {
-            var pathsToCheck = new[] { "posters", "tips", "CustomPosters/posters", "CustomPosters/tips" }
+            var pathsToCheck = Constants.PosterPackSubdirectories
                 .Select(subDir => Path.Combine(folderPath, subDir));
 
             foreach (var path in pathsToCheck)
             {
-                if (Directory.Exists(path))
+                if (Directory.Exists(path) && 
+                    Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly)
+                     .Any(file => Constants.AllValidExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())))
                 {
-                    if (Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly)
-                                 .Any(file => _validExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
 
@@ -88,7 +81,7 @@ namespace CustomPosters
 
         private void InitializeBiggerShip()
         {
-            IsBiggerShipInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("BiggerShip");
+            IsBiggerShipInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(Constants.BiggerShipGUID);
             if (IsBiggerShipInstalled)
             {
                 Plugin.Log.LogInfo("Detected BiggerShip");
@@ -98,214 +91,110 @@ namespace CustomPosters
 
         private void InitializeShipWindows()
         {
-            IsShipWindowsInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("TestAccount666.ShipWindows");
-            if (!IsShipWindowsInstalled)
-            {
-                return;
-            }
+            IsShipWindowsInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(Constants.ShipWindowsGUID);
+            if (!IsShipWindowsInstalled) return;
 
             var configPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
-            if (!File.Exists(configPath))
-            {
-                Plugin.Log.LogWarning("ShipWindows cfg not found");
-                return;
-            }
-
-            try
-            {
-                var configLines = File.ReadAllLines(configPath);
-                bool inRightWindowSection = false;
-                foreach (var line in configLines)
-                {
-                    var trimmedLine = line.Trim();
-                    if (trimmedLine.StartsWith("[Right Window (SideRight)]"))
-                    {
-                        inRightWindowSection = true;
-                        continue;
-                    }
-                    if (inRightWindowSection && trimmedLine.StartsWith("["))
-                    {
-                        inRightWindowSection = false;
-                        continue;
-                    }
-                    if (inRightWindowSection && trimmedLine.StartsWith("1. Enabled = "))
-                    {
-                        if (bool.TryParse(trimmedLine.Replace("1. Enabled = ", "").Trim(), out bool enabled))
-                        {
-                            IsWindow2Enabled = enabled;
-                            Plugin.Log.LogInfo($"Detected ShipWindows, Right Window - {IsWindow2Enabled}");
-                            break;
-                        }
-                    }
-                }
-                if (!inRightWindowSection && !IsWindow2Enabled)
-                {
-                    Plugin.Log.LogDebug("Right Window section not found");
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogError($"Failed to read ShipWindows cfg: {ex.Message}");
-            }
+            IsWindow2Enabled = ConfigFileReader.ReadBoolFromSection(
+                configPath, 
+                "Right Window (SideRight)", 
+                "1. Enabled = ", 
+                false
+            );
+    
+            Plugin.Log.LogInfo($"Detected ShipWindows, Right Window - {IsWindow2Enabled}");
         }
 
         private void InitializeWiderShipMod()
         {
-            IsWiderShipModInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("mborsh.WiderShipMod");
-            if (!IsWiderShipModInstalled)
-            {
-                return;
-            }
+            IsWiderShipModInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(Constants.WiderShipModGUID);
+            if (!IsWiderShipModInstalled) return;
 
             try
             {
                 var widerShipType = Type.GetType("WiderShipMod");
-                if (widerShipType == null)
+                var extendedSideField = widerShipType?.GetField("ExtendedSide", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        
+                if (extendedSideField != null)
+                {
+                    WiderShipExtendedSide = (string)extendedSideField.GetValue(null);
+                }
+                else
                 {
                     ReadWiderShipConfigFile();
-                    return;
                 }
-
-                var extendedSideField = widerShipType.GetField("ExtendedSide", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                if (extendedSideField == null)
-                {
-                    ReadWiderShipConfigFile();
-                    return;
-                }
-
-                WiderShipExtendedSide = (string)extendedSideField.GetValue(null);
-                Plugin.Log.LogInfo($"Detected WiderShip, ES - {WiderShipExtendedSide}");
             }
-            catch (Exception)
+            catch
             {
                 ReadWiderShipConfigFile();
             }
+    
+            Plugin.Log.LogInfo($"Detected WiderShip, ES - {WiderShipExtendedSide}");
         }
 
         private void ReadWiderShipConfigFile()
         {
             var configPath = Path.Combine(Paths.ConfigPath, "mborsh.WiderShipMod.cfg");
-            if (!File.Exists(configPath))
-            {
-                Plugin.Log.LogError("WiderShipMod cfg not found, defaulting ES to 'Both'");
-                WiderShipExtendedSide = "Both";
-                return;
-            }
-
-            try
-            {
-                var configLines = File.ReadAllLines(configPath);
-                foreach (var line in configLines)
-                {
-                    var trimmedLine = line.Trim();
-                    if (trimmedLine.StartsWith("Extended Side = ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        WiderShipExtendedSide = trimmedLine.Substring("Extended Side = ".Length).Trim();
-                        Plugin.Log.LogInfo($"Detected WiderShip, ES - {WiderShipExtendedSide}");
-                        return;
-                    }
-                }
-                Plugin.Log.LogWarning("ES not found in WiderShipMod cfg, defaulting to 'Both'");
-                WiderShipExtendedSide = "Both";
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogError($"Failed to read WiderShipMod cfg: {ex.Message}, defaulting ES to 'Both'");
-                WiderShipExtendedSide = "Both";
-            }
+            WiderShipExtendedSide = ConfigFileReader.ReadStringValue(
+                configPath,
+                "Extended Side = ",
+                "Both"
+            );
         }
 
         private void Initialize2StoryShipMod()
         {
-            Is2StoryShipModInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("MelanieMelicious.2StoryShip");
-            if (!Is2StoryShipModInstalled)
-            {
-                return;
-            }
+            Is2StoryShipModInstalled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(Constants.TwoStoryShipGUID);
+            if (!Is2StoryShipModInstalled) return;
 
             try
             {
                 var storyShipType = Type.GetType("2StoryShip");
-                if (storyShipType == null)
+                if (storyShipType != null)
+                {
+                    var rightField = storyShipType.GetField("EnableRightWindows",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var leftField = storyShipType.GetField("EnableLeftWindows",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+                    if (rightField != null && leftField != null)
+                    {
+                        EnableRightWindows = (bool)rightField.GetValue(null);
+                        EnableLeftWindows = (bool)leftField.GetValue(null);
+                    }
+                    else
+                    {
+                        Read2StoryShipConfigFile();
+                    }
+                }
+                else
                 {
                     Read2StoryShipConfigFile();
-                    return;
                 }
-
-                var rightWindowsField = storyShipType.GetField("EnableRightWindows", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                var leftWindowsField = storyShipType.GetField("EnableLeftWindows", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                if (rightWindowsField == null || leftWindowsField == null)
-                {
-                    Plugin.Log.LogWarning("Failed to find EnableRightWindows or EnableLeftWindows fields in cfg");
-                    Read2StoryShipConfigFile();
-                    return;
-                }
-
-                EnableRightWindows = (bool)rightWindowsField.GetValue(null);
-                EnableLeftWindows = (bool)leftWindowsField.GetValue(null);
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
             }
-            catch (Exception)
+            catch
             {
                 Read2StoryShipConfigFile();
             }
+
+            Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
         }
 
         private void Read2StoryShipConfigFile()
         {
             var configPath = Path.Combine(Paths.ConfigPath, "MelanieMelicious.2StoryShip.cfg");
-            if (!File.Exists(configPath))
-            {
-                Plugin.Log.LogError("2StoryShipMod cfg not found, defaulting RW and LW to true");
-                EnableRightWindows = true;
-                EnableLeftWindows = true;
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
-                return;
-            }
+            var values = ConfigFileReader.ReadMultipleValues(
+                configPath,
+                "Enable Right Windows = ",
+                "Enable Left Windows = "
+            );
 
-            try
-            {
-                var configLines = File.ReadAllLines(configPath);
-                bool rightWindowsSet = false, leftWindowsSet = false;
-                foreach (var line in configLines)
-                {
-                    var trimmedLine = line.Trim();
-                    if (trimmedLine.StartsWith("Enable Right Windows = ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (bool.TryParse(trimmedLine.Substring("Enable Right Windows = ".Length).Trim(), out bool rightEnabled))
-                        {
-                            EnableRightWindows = rightEnabled;
-                            rightWindowsSet = true;
-                        }
-                    }
-                    else if (trimmedLine.StartsWith("Enable Left Windows = ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (bool.TryParse(trimmedLine.Substring("Enable Left Windows = ".Length).Trim(), out bool leftEnabled))
-                        {
-                            EnableLeftWindows = leftEnabled;
-                            leftWindowsSet = true;
-                        }
-                    }
-                    if (rightWindowsSet && leftWindowsSet)
-                        break;
-                }
-
-                if (!rightWindowsSet || !leftWindowsSet)
-                {
-                    Plugin.Log.LogWarning($"One or both window settings not found in 2StoryShipMod cfg, defaulting unset values to true");
-                    if (!rightWindowsSet) EnableRightWindows = true;
-                    if (!leftWindowsSet) EnableLeftWindows = true;
-                }
-
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogError($"Failed to read 2StoryShipMod cfg: {ex.Message}, defaulting RW and LW to true");
-                EnableRightWindows = true;
-                EnableLeftWindows = true;
-                Plugin.Log.LogInfo($"Detected 2StoryShipMod, RW - {EnableRightWindows}, LW - {EnableLeftWindows}");
-            }
+            EnableRightWindows = values.TryGetValue("Enable Right Windows = ", out var rightValue)
+                ? bool.Parse(rightValue)
+                : true;
+            EnableLeftWindows = values.TryGetValue("Enable Left Windows = ", out var leftValue)
+                ? bool.Parse(leftValue)
+                : true;
         }
 
         public void SetRandomSeed(int seed)
@@ -377,7 +266,7 @@ namespace CustomPosters
         {
             var enabledPacks = PosterFolders
             .Where(f => Plugin.ModConfig.IsPackEnabled(f))
-            .Select(f => Path.GetFullPath(f).Replace('\\', '/'))
+            .Select(f => Path.GetFullPath(f).NormalizePath())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
