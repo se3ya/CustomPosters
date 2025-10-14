@@ -1,5 +1,10 @@
 - Add additional posters for extend ship mods.
-- Save posters for save setting.
+- Profile saved posters for save setting.
 - Re-create vanilla poster models and make it as default.
   - Make an improved vanilla poster models as an option.
   - Make Quad posters (planes) as an option.
+- Option to make posters be like furniture:
+  - option to make them moveable like furniture;
+  - option to make them buyable, so they are hidden first.
+  - option to make posters always unlocked if Buyable option is enabled.
+- Clickable posters.
