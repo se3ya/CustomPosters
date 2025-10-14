@@ -7,13 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.2.0] - 2025-10-13 - "Synchronization"
 ### Added
+- Added video playback synchronization. Hosts video playback time is synced with all clients.
+- Added posters synchronization. Host now selects the active poster pack or randomization seed and syncs it across all clients.
+- Added toggleable *Networking* option to config.
 - Added *LethalNetworkAPI* as dependency.
-- Added video playback synchronization.
-- Added posters synchronization.
-
-### Changed
-- Cleaner logs.
-
 
 ## [3.1.0] - 2025-10-12 - "Compatibility"
 ### Added
