@@ -11,7 +11,7 @@ namespace CustomPosters.Data.PosterLayouts
             new() { Position = new Vector3(9.9186f, 2.8591f, -17.4716f), Rotation = new Vector3(0, 180f, 356.3345f), Scale = new Vector3(0.7487f, 1.0539f, 1f), Name = "Poster3" },
             new() { Position = new Vector3(5.2187f, 2.5963f, -11.0945f), Rotation = new Vector3(0, 337.5868f, 2.68f), Scale = new Vector3(0.7289f, 0.9989f, 1f), Name = "Poster4" },
             new() { Position = new Vector3(5.5286f, 2.5882f, -17.3541f), Rotation = new Vector3(0, 201.1556f, 359.8f), Scale = new Vector3(0.5516f, 0.769f, 1f), Name = "Poster5" },
-            new() { Position = new Vector3(3.0647f, 2.8174f, -11.7341f), Rotation = new Vector3(0, 0, 358.6752f), Scale = new Vector3(0.8596f, 1.2194f, 1f), Name = "CustomTips" }
+            new() { Position = new Vector3(8.1417f, 2.517138f, -21.9378f), Rotation = new Vector3(-270.392f, -225.379f, 314.887f), Scale = new Vector3(46.75954f, 100f, 70.89838f), Name = "CustomTips" }
         };
     }
 }

@@ -1,6 +1,6 @@
 ---
 # CustomPosters
-### **A mod for Lethal Company that replaces the vanilla posters in the ship with custom posters added by user.**
+### **A mod that replaces the vanilla posters in the ship with custom posters added by user.**
 
 ---
 
@@ -105,8 +105,11 @@ In PerPoster mode, the mod will just pick another working poster from the availa
 ### Default Poster (Plane.001) is Still Visible
 - This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled.
 
-### Why can't I join vanilla lobbies? 
+### Not being able to join vanilla lobbies 
 - Mod uses networking that conflicts with vanilla lobbies. To join vanilla lobbies, disable the "Enable Networking" option in the configs.
+
+### Video poster `.mp4`  didn't load
+- Mod doesn't support `.mp4` videos that are 60 fps.
 
 ---
 

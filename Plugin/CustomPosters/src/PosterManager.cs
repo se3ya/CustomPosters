@@ -146,15 +146,21 @@ namespace CustomPosters
             CreatedPosters.Clear();
         }
 
-        private static GameObject? CreatePoster()
+        private static GameObject? CreatePoster(string name)
         {
-            if (AssetManager.PosterPrefab == null)
+            GameObject? prefab = name switch
             {
-                Plugin.Log.LogError("Cannot create poster because PosterPrefab is not loaded.");
+                "CustomTips" => AssetManager.TipsPrefab,
+                _ => AssetManager.PosterPrefab
+            };
+
+            if (prefab == null)
+            {
+                Plugin.Log.LogError($"Failed to find prefab for {name}.");
                 return null;
             }
 
-            return UnityEngine.Object.Instantiate(AssetManager.PosterPrefab);
+            return UnityEngine.Object.Instantiate(prefab);
         }
 
         public static double? GetVideoTimeForPoster(string posterName)
@@ -347,7 +353,7 @@ namespace CustomPosters
 
             for (int i = 0; i < posterData.Length; i++)
             {
-                var poster = CreatePoster();
+                var poster = CreatePoster(posterData[i].Name);
                 if (poster == null)
                 {
                     continue;
