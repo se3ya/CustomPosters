@@ -34,22 +34,14 @@ namespace CustomPosters
 
             var renderer = GetComponent<MeshRenderer>();
             var material = new Material(materialTemplate);
-
-            Shader standardShader = Shader.Find("HDRP/Lit");
-            if (standardShader != null)
-            {
-                material.shader = standardShader;
-            }
-            else
-            {
-                Plugin.Log.LogWarning("Could not find HDRP/Lit shader.");
-            }
+    
             renderer.material = material;
 
             if (videoPath != null && System.IO.Path.GetExtension(videoPath).ToLower() == ".mp4")
             {
                 _renderTexture = new RenderTexture(512, 512, 16);
-                material.mainTexture = _renderTexture;
+
+                material.SetTexture("_BaseColorMap", _renderTexture);
 
                 _videoPlayer = gameObject.AddComponent<VideoPlayer>();
                 _videoPlayer.url = "file://" + videoPath;
@@ -110,7 +102,7 @@ namespace CustomPosters
             }
             else if (texture != null)
             {
-                material.mainTexture = texture;
+                material.SetTexture("_BaseColorMap", texture);
             }
             else
             {
