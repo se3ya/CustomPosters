@@ -10,10 +10,12 @@ namespace CustomPosters
         // poster pack subdirectories
         public static readonly string[] PosterPackSubdirectories = 
         { 
-            "posters", 
-            "tips", 
-            "CustomPosters/posters", 
-            "CustomPosters/tips" 
+            "*/posters",  // multi-pack
+            "*/tips",     // multi-pack
+            "CustomPosters/posters",  // single-pack
+            "CustomPosters/tips",     // single-pack
+            "*/CustomPosters/posters", // single-pack
+            "*/CustomPosters/tips"     // single-pack
         };
 
         // video settings

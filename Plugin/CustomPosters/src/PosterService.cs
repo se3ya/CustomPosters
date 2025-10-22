@@ -37,15 +37,52 @@ namespace CustomPosters
 
                 foreach (var folder in Directory.GetDirectories(pluginPath))
                 {
+                    try
+                    {
+                        // Plugin.Log.LogDebug($"Scanning mod folder: {PathUtils.GetPrettyPath(folder)}");
+                        
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.LogDebug($"Error while scanning folder path for logging: {ex.Message}");
+                    }
                     var folderName = Path.GetFileName(folder);
                     if (modFolderNames.Contains(folderName))
                     {
                         continue;
                     }
 
-                    if (IsValidPosterPack(folder))
+                    var singleChild = Path.Combine(folder, "CustomPosters");
+                    if (Directory.Exists(singleChild) && IsValidPosterPack(singleChild))
+                    {
+                        _posterFolders.Add(singleChild);
+                        Plugin.Log.LogDebug($"Added single pack: {PathUtils.GetPrettyPath(singleChild)}");
+                        continue;
+                    }
+
+                    var childDirs = Directory.GetDirectories(folder);
+                    var anyChildAdded = false;
+                    foreach (var child in childDirs)
+                    {
+                        try
+                        {
+                            if (IsValidPosterPack(child))
+                            {
+                                _posterFolders.Add(child);
+                                Plugin.Log.LogDebug($"Added child pack: {PathUtils.GetPrettyPath(child)}");
+                                anyChildAdded = true;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Plugin.Log.LogWarning($"Error while checking child folder {child}: {ex.Message}");
+                        }
+                    }
+
+                    if (!anyChildAdded && IsValidPosterPack(folder))
                     {
                         _posterFolders.Add(folder);
+                        Plugin.Log.LogDebug($"Added pack from root folder: {PathUtils.GetPrettyPath(folder)}");
                     }
                 }
             }
@@ -63,17 +100,34 @@ namespace CustomPosters
 
         private bool IsValidPosterPack(string folderPath)
         {
-            var pathsToCheck = Constants.PosterPackSubdirectories
-                .Select(subDir => Path.Combine(folderPath, subDir));
-
-            foreach (var path in pathsToCheck)
+            try
             {
-                if (Directory.Exists(path) && 
-                    Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly)
-                     .Any(file => Constants.AllValidExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())))
+                var postersPath = Path.Combine(folderPath, "posters");
+                if (Directory.Exists(postersPath) &&
+                    Directory.EnumerateFiles(postersPath, "*.*", SearchOption.TopDirectoryOnly)
+                        .Any(file => Constants.ValidImageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) ||
+                                     Constants.ValidVideoExtensions.Contains(Path.GetExtension(file).ToLowerInvariant())))
                 {
                     return true;
                 }
+
+                var tipsPath = Path.Combine(folderPath, "tips");
+                if (Directory.Exists(tipsPath))
+                {
+                    if (File.Exists(Path.Combine(tipsPath, "CustomTips.png")))
+                    {
+                        return true;
+                    }
+                }
+
+                if (File.Exists(Path.Combine(folderPath, "CustomTips.png")))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogDebug($"IsValidPosterPack error for {PathUtils.GetPrettyPath(folderPath)}: {ex.Message}");
             }
 
             return false;

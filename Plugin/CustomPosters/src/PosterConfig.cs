@@ -124,8 +124,7 @@ namespace CustomPosters
             {
                 try
                 {
-                    var fullPackName = Path.GetFileName(packPath);
-                    var packName = PackName(fullPackName);
+                    var packName = PackName(packPath);
                     if (string.IsNullOrEmpty(packName)) continue;
 
                     var mainPackSection = $"{packCounter}. {packName}";
@@ -227,7 +226,7 @@ namespace CustomPosters
             _configFile.Save();
             _configFile.SaveOnConfigSet = true;
 
-            Plugin.Log.LogInfo($"Configuration initialized with {_packEnabledEntries.Count} packs and {_fileConfigs.Count} files");
+            Plugin.Log.LogInfo($"Found {_packEnabledEntries.Count} packs and {_fileConfigs.Count} poster files");
         }
         
         public bool UsePoster5VanillaModel =>
@@ -238,7 +237,7 @@ namespace CustomPosters
 
         public bool IsPackEnabled(string packPath)
         {
-            var packName = PackName(Path.GetFileName(packPath));
+            var packName = PackName(packPath);
             if (_packEnabledEntries.TryGetValue(packName, out var entry))
             {
                 return entry.Value;
@@ -248,7 +247,7 @@ namespace CustomPosters
 
         public int GetPackChance(string packPath)
         {
-            var packName = PackName(Path.GetFileName(packPath));
+            var packName = PackName(packPath);
             if (_packChanceEntries.TryGetValue(packName, out var entry))
             {
                 return entry.Value;
@@ -286,28 +285,44 @@ namespace CustomPosters
             return (10, 3.5f, VideoAspectRatio.Stretch);
         }
 
-        private static string PackName(string fullPackName)
+        private static string PackName(string packPath)
         {
-            return PathUtils.GetPackName(fullPackName);
+            return PathUtils.GetDisplayPackName(packPath);
         }
 
         private static IEnumerable<string> GetFilesFromPack(string packPath)
         {
             var allFiles = new List<string>();
-            var pathsToCheck = Constants.PosterPackSubdirectories
-                .Select(subDir => Path.Combine(packPath, subDir));
 
-            foreach (var path in pathsToCheck)
+            // posters directory
+            var postersPath = Path.Combine(packPath, "posters");
+            if (Directory.Exists(postersPath))
             {
-                if (Directory.Exists(path))
-                {
-                    allFiles.AddRange(
-                        Directory.GetFiles(path)
-                            .Where(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                    );
-                }
+                allFiles.AddRange(
+                    Directory.GetFiles(postersPath)
+                        .Where(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                );
             }
-            return allFiles.Distinct().Select(f => Path.GetFullPath(f));
+
+            // tips directory
+            var tipsPath = Path.Combine(packPath, "tips");
+            if (Directory.Exists(tipsPath))
+            {
+                allFiles.AddRange(
+                    Directory.GetFiles(tipsPath)
+                        .Where(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                );
+            }
+
+            var customTips = Path.Combine(packPath, "CustomTips.png");
+            if (File.Exists(customTips)) allFiles.Add(customTips);
+
+            allFiles.AddRange(
+                Directory.GetFiles(packPath)
+                    .Where(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            );
+
+            return allFiles.Distinct(StringComparer.OrdinalIgnoreCase).Select(f => Path.GetFullPath(f));
         }
         
         private void ClearOrphanedEntries()

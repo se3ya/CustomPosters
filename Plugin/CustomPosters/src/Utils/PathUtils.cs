@@ -31,5 +31,27 @@ namespace CustomPosters.Utils
     
             return fullPackName;
         }
+
+        public static string GetDisplayPackName(string packPath)
+        {
+            if (string.IsNullOrEmpty(packPath)) return string.Empty;
+
+            var folderName = System.IO.Path.GetFileName(packPath);
+            var parent = System.IO.Path.GetDirectoryName(packPath);
+            if (!string.IsNullOrEmpty(parent))
+            {
+                var parentName = System.IO.Path.GetFileName(parent);
+                if (string.Equals(folderName, "CustomPosters", StringComparison.OrdinalIgnoreCase))
+                {
+                    return GetPackName(parentName);
+                }
+                if (!string.IsNullOrEmpty(parentName))
+                {
+                    return folderName;
+                }
+            }
+
+            return folderName;
+        }
     }
 }

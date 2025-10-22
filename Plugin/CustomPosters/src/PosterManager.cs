@@ -237,10 +237,26 @@ namespace CustomPosters
                 {
                     if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
                     {
-                        _selectedPack = PackSelector.SelectPackByChance(enabledPacks);
+                        // Try selecting a pack that actually contains at least one valid file
+                        var candidatePacks = new List<string>(enabledPacks);
+                        string? chosen = null;
+
+                        while (candidatePacks.Count > 0)
+                        {
+                            var candidate = PackSelector.SelectPackByChance(candidatePacks);
+                            if (PackHasValidFiles(candidate))
+                            {
+                                chosen = candidate;
+                                break;
+                            }
+                            // remove this candidate and retry
+                            candidatePacks.Remove(candidate);
+                        }
+
+                        _selectedPack = chosen; // may be null if none had files
                     }
 
-                    if (Plugin.ModConfig.EnableNetworking.Value)
+                    if (!string.IsNullOrEmpty(_selectedPack) && Plugin.ModConfig.EnableNetworking.Value)
                     {
                         PosterSyncManager.SendPacket(_selectedPack!);
                     }
@@ -248,11 +264,16 @@ namespace CustomPosters
 
                 if (string.IsNullOrEmpty(_selectedPack))
                 {
-                    Plugin.Log.LogInfo(Plugin.ModConfig.EnableNetworking.Value ? "Client is waiting for host to select a pack..." : "Pack selection failed in client-side only mode");
+                    // No valid pack found (no pack had files)
+                    Plugin.Log.LogInfo(Plugin.ModConfig.EnableNetworking.Value ? "Client is waiting for host to select a pack..." : "No valid pack found, falling back to vanilla posters");
+                    if (posterPlane != null)
+                    {
+                        posterPlane.SetActive(true);
+                    }
                     yield break;
                 }
 
-                var shortPackName = PathUtils.GetPackName(Path.GetFileName(_selectedPack));
+                var shortPackName = PathUtils.GetDisplayPackName(_selectedPack);
                 Plugin.Log.LogInfo($"Using pack: {shortPackName}");
                 packsToUse = new List<string> { _selectedPack };
             }
