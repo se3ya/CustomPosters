@@ -153,13 +153,13 @@ namespace CustomPosters
             switch (posterName)
             {
                 case "CustomTips":
-                    prefab = Plugin.ModConfig.UseTipsVanillaModel.Value 
+                    prefab = Plugin.ModConfig.UseTipsVanillaModel 
                         ? AssetManager.TipsPrefab 
                         : AssetManager.PosterPrefab;
                     break;
                     
                 case "Poster5":
-                    prefab = Plugin.ModConfig.UsePoster5VanillaModel.Value 
+                    prefab = Plugin.ModConfig.UsePoster5VanillaModel
                         ? AssetManager.Poster5Prefab 
                         : AssetManager.PosterPrefab;
                     break;

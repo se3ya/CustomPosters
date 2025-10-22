@@ -6,8 +6,8 @@ namespace CustomPosters.Data.PosterLayouts
     {
         public static PosterData[] Get()
         {
-            bool usePoster5Vanilla = Plugin.ModConfig.UsePoster5VanillaModel.Value;
-            bool useTipsVanilla = Plugin.ModConfig.UseTipsVanillaModel.Value;
+            bool usePoster5Vanilla = Plugin.ModConfig.UsePoster5VanillaModel;
+            bool useTipsVanilla = Plugin.ModConfig.UseTipsVanillaModel;
 
             return new PosterData[]
             {

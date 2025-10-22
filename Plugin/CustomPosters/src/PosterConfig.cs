@@ -37,8 +37,16 @@ namespace CustomPosters
         public ConfigEntry<bool> EnableTextureCaching { get; private set; } = null!;
         public ConfigEntry<bool> EnableVideoAudio { get; private set; } = null!;
 
-        public ConfigEntry<bool> UsePoster5VanillaModel { get; private set; } = null!;
-        public ConfigEntry<bool> UseTipsVanillaModel { get; private set; } = null!;
+        [Flags]
+        public enum VanillaModelOption
+        {
+            None = 0,
+            Poster5 = 1,
+            Tips = 2,
+            Both = Poster5 | Tips
+        }
+
+        public ConfigEntry<VanillaModelOption> VanillaModelSelection { get; private set; } = null!;
         
         private readonly Dictionary<string, ConfigEntry<bool>> _packEnabledEntries = new();
         private readonly Dictionary<string, ConfigEntry<int>> _packChanceEntries = new();
@@ -50,7 +58,7 @@ namespace CustomPosters
         {
             _configFile = config;
         }
-        
+
         public void Initialize()
         {
             _configFile.SaveOnConfigSet = false;
@@ -98,20 +106,17 @@ namespace CustomPosters
                 "Disable to mute videos."
             );
 
-            UsePoster5VanillaModel = _configFile.Bind(
-                "1. Settings", 
-                "Use Poster5 Vanilla Model", 
-                true, 
-                "If true, uses the extracted vanilla Lethal Company model for Poster5.\n" +
-                "If false, uses a simple quad model like other posters."
-            );
-            
-            UseTipsVanillaModel = _configFile.Bind(
-                "1. Settings", 
-                "Use Tips Vanilla Model", 
-                true, 
-                "If true, uses the extracted vanilla Lethal Company model for the Tips poster.\n" +
-                "If false, uses a simple quad model like other posters."
+            VanillaModelSelection = _configFile.Bind(
+                "1. Settings",
+                "Vanilla Model",
+                VanillaModelOption.Both,
+                new ConfigDescription(
+                    "Choose which posters use the extracted vanilla Lethal Company model.\n" +
+                    "None: All posters use simple quad models.\n" +
+                    "Poster5: Only Poster5 uses vanilla model.\n" +
+                    "Tips: Only Tips poster uses vanilla model.\n" +
+                    "Both: Both Poster5 and Tips use vanilla models."
+                )
             );
 
             int packCounter = 2;
@@ -127,25 +132,25 @@ namespace CustomPosters
                     var chancesPackSection = $"{packCounter}. {packName} - Chances";
 
                     var enabledEntry = _configFile.Bind(
-                        mainPackSection, 
-                        "Enabled", 
-                        true, 
+                        mainPackSection,
+                        "Enabled",
+                        true,
                         $"Enable or disable the {packName} pack"
                     );
                     _packEnabledEntries[packName] = enabledEntry;
 
                     var chanceEntry = _configFile.Bind(
-                        chancesPackSection, 
-                        "Global chance", 
-                        0, 
+                        chancesPackSection,
+                        "Global chance",
+                        0,
                         new ConfigDescription(
                             $"Chance of selecting the {packName} pack in PerPack randomization mode.\n" +
-                            $"Set to 0 to use equal probability with other packs.", 
+                            $"Set to 0 to use equal probability with other packs.",
                             new AcceptableValueRange<int>(0, 100)
                         )
                     );
                     _packChanceEntries[packName] = chanceEntry;
-                    
+
                     var allFiles = GetFilesFromPack(packPath);
                     foreach (var filePath in allFiles)
                     {
@@ -155,19 +160,19 @@ namespace CustomPosters
                         var formattedKey = $"{fileNameWithoutExt}-{fileExt}";
 
                         var fileEnabledEntry = _configFile.Bind(
-                            mainPackSection, 
-                            formattedKey, 
-                            true, 
+                            mainPackSection,
+                            formattedKey,
+                            true,
                             $"Enable or disable poster file '{fileName}' in pack '{packName}'"
                         );
-                        
+
                         var fileChanceEntry = _configFile.Bind(
-                            chancesPackSection, 
-                            $"{formattedKey} Chance", 
-                            0, 
+                            chancesPackSection,
+                            $"{formattedKey} Chance",
+                            0,
                             new ConfigDescription(
                                 $"Chance of selecting poster '{fileName}' in PerPoster mode.\n" +
-                                $"Set to 0 to use equal probability with other posters.", 
+                                $"Set to 0 to use equal probability with other posters.",
                                 new AcceptableValueRange<int>(0, 100)
                             )
                         );
@@ -177,29 +182,29 @@ namespace CustomPosters
                         if (fileExt == "MP4")
                         {
                             fileConfig.Volume = _configFile.Bind(
-                                mainPackSection, 
-                                $"{formattedKey} Volume", 
-                                Constants.DefaultVideoVolume, 
+                                mainPackSection,
+                                $"{formattedKey} Volume",
+                                Constants.DefaultVideoVolume,
                                 new ConfigDescription(
-                                    $"Volume for video '{fileName}'.", 
+                                    $"Volume for video '{fileName}'.",
                                     new AcceptableValueRange<int>(0, 100)
                                 )
                             );
-                            
+
                             fileConfig.MaxDistance = _configFile.Bind(
-                                mainPackSection, 
-                                $"{formattedKey} MaxDistance", 
-                                Constants.DefaultVideoMaxDistance, 
+                                mainPackSection,
+                                $"{formattedKey} MaxDistance",
+                                Constants.DefaultVideoMaxDistance,
                                 new ConfigDescription(
-                                    $"Maximum distance for audio playback of video '{fileName}'", 
+                                    $"Maximum distance for audio playback of video '{fileName}'",
                                     new AcceptableValueRange<float>(1.0f, 5.0f)
                                 )
                             );
-                            
+
                             fileConfig.AspectRatio = _configFile.Bind(
-                                mainPackSection, 
-                                $"{formattedKey} AspectRatio", 
-                                VideoAspectRatio.Stretch, 
+                                mainPackSection,
+                                $"{formattedKey} AspectRatio",
+                                VideoAspectRatio.Stretch,
                                 $"Aspect ratio mode for video '{fileName}'.\n" +
                                 $"Stretch: Stretches video to fit poster area.\n" +
                                 $"FitInside: Fits video inside poster area without cropping.\n" +
@@ -207,7 +212,7 @@ namespace CustomPosters
                                 $"NoScaling: Uses original video size without scaling."
                             );
                         }
-                        
+
                         _fileConfigs[filePath] = fileConfig;
                     }
                     packCounter++;
@@ -217,13 +222,19 @@ namespace CustomPosters
                     Plugin.Log.LogError($"Failed to generate config for pack at {PathUtils.GetPrettyPath(packPath)}: {ex.Message}");
                 }
             }
-            
+
             ClearOrphanedEntries();
             _configFile.Save();
             _configFile.SaveOnConfigSet = true;
-            
+
             Plugin.Log.LogInfo($"Configuration initialized with {_packEnabledEntries.Count} packs and {_fileConfigs.Count} files");
         }
+        
+        public bool UsePoster5VanillaModel =>
+            VanillaModelSelection.Value.HasFlag(VanillaModelOption.Poster5);
+
+        public bool UseTipsVanillaModel =>
+            VanillaModelSelection.Value.HasFlag(VanillaModelOption.Tips);
 
         public bool IsPackEnabled(string packPath)
         {
@@ -267,12 +278,12 @@ namespace CustomPosters
         {
             if (_fileConfigs.TryGetValue(Path.GetFullPath(filePath), out var config))
             {
-                int volume = config.Volume?.Value ?? 20;
-                float maxDistance = config.MaxDistance?.Value ?? 4.0f;
+                int volume = config.Volume?.Value ?? 10;
+                float maxDistance = config.MaxDistance?.Value ?? 3.5f;
                 VideoAspectRatio aspectRatio = config.AspectRatio?.Value ?? VideoAspectRatio.Stretch;
                 return (volume, maxDistance, aspectRatio);
             }
-            return (20, 4.0f, VideoAspectRatio.Stretch);
+            return (10, 3.5f, VideoAspectRatio.Stretch);
         }
 
         private static string PackName(string fullPackName)

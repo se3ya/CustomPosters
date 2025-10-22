@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.3.0] - 2025-10-21 - "Vanilla models"
 ### Added
-- Added an option to use Poster5 and Tips vanilla models (default).
+- Added the vanilla meshes of Poster5 and Tips.
+  - There's an option in the `Settings` section to use one of them or neither of them.
+- Support for transparent image backgrounds has been added. Instead of transparent backgrounds appearing black, they are now fully transparent.
 
 ### Changed
 - Poster positions and rotation of ShipWindows, TwoStoryShip, and WiderShipMod were improved to be closer to the original.
+- Reduced default volume of .mp4 posters from *20* to *10*.
+- Reduced default max distance of .mp4 posters from *4* to *3.5*.
 
 ## [3.2.0] - 2025-10-15 - "Synchronization"
 ### Added
@@ -24,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added BiggerShip compatibility.
 
 ### Fixed
-- Fixed posters not being affected by lights and shadows.
+- Fixed posters not being affected by games shaders.
 
 ## [3.0.0] - 2025-10-11 - "The Overhaul"
 ### Added
