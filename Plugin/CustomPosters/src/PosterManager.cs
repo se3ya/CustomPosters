@@ -237,7 +237,6 @@ namespace CustomPosters
                 {
                     if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
                     {
-                        // Try selecting a pack that actually contains at least one valid file
                         var candidatePacks = new List<string>(enabledPacks);
                         string? chosen = null;
 
@@ -249,11 +248,10 @@ namespace CustomPosters
                                 chosen = candidate;
                                 break;
                             }
-                            // remove this candidate and retry
                             candidatePacks.Remove(candidate);
                         }
 
-                        _selectedPack = chosen; // may be null if none had files
+                        _selectedPack = chosen;
                     }
 
                     if (!string.IsNullOrEmpty(_selectedPack) && Plugin.ModConfig.EnableNetworking.Value)
@@ -264,7 +262,6 @@ namespace CustomPosters
 
                 if (string.IsNullOrEmpty(_selectedPack))
                 {
-                    // No valid pack found (no pack had files)
                     Plugin.Log.LogInfo(Plugin.ModConfig.EnableNetworking.Value ? "Client is waiting for host to select a pack..." : "No valid pack found, falling back to vanilla posters");
                     if (posterPlane != null)
                     {
@@ -448,6 +445,37 @@ namespace CustomPosters
                     Plugin.Log.LogWarning("Re-enabled vanilla Plane.001 poster due to no custom posters loaded");
                 }
             }
+        }
+
+        private static bool PackHasValidFiles(string pack)
+        {
+            try
+            {
+                var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
+
+                var postersPath = Path.Combine(pack, "posters");
+                var tipsPath = Path.Combine(pack, "tips");
+                var nestedPostersPath = Path.Combine(pack, "CustomPosters", "posters");
+                var nestedTipsPath = Path.Combine(pack, "CustomPosters", "tips");
+
+                var paths = new[] { postersPath, tipsPath, nestedPostersPath, nestedTipsPath }
+                    .Where(p => Directory.Exists(p)).ToList();
+
+                foreach (var p in paths)
+                {
+                    if (Directory.EnumerateFiles(p).Any(f => validExtensions.Contains(Path.GetExtension(f).ToLower())))
+                        return true;
+                }
+
+                if (File.Exists(Path.Combine(pack, "CustomTips.png")))
+                    return true;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogDebug($"PackHasValidFiles error for {pack}: {ex.Message}");
+            }
+
+            return false;
         }
 
 
