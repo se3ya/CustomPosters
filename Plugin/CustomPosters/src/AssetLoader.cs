@@ -26,6 +26,7 @@ namespace CustomPosters
             }
 
             PosterPrefab = Bundle.LoadAsset<GameObject>("CustomPosterPrefab");
+            Poster5Prefab = Bundle.LoadAsset<GameObject>("Poster5");
             TipsPrefab = Bundle.LoadAsset<GameObject>("Tips");
 
             if (PosterPrefab == null)
@@ -35,6 +36,11 @@ namespace CustomPosters
             else
             {
                 Plugin.Log.LogInfo("Loaded assetbundle.");
+            }
+
+            if (Poster5Prefab == null)
+            {
+                Plugin.Log.LogError("Failed to load Poster5 prefab from the AssetBundle.");
             }
 
             if (TipsPrefab == null)

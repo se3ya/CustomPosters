@@ -146,18 +146,39 @@ namespace CustomPosters
             CreatedPosters.Clear();
         }
 
-        private static GameObject? CreatePoster(string name)
+        private static GameObject? CreatePoster(string posterName)
         {
-            GameObject? prefab = name switch
+            GameObject? prefab = null;
+            
+            switch (posterName)
             {
-                "CustomTips" => AssetManager.TipsPrefab,
-                _ => AssetManager.PosterPrefab
-            };
+                case "CustomTips":
+                    prefab = Plugin.ModConfig.UseTipsVanillaModel.Value 
+                        ? AssetManager.TipsPrefab 
+                        : AssetManager.PosterPrefab;
+                    break;
+                    
+                case "Poster5":
+                    prefab = Plugin.ModConfig.UsePoster5VanillaModel.Value 
+                        ? AssetManager.Poster5Prefab 
+                        : AssetManager.PosterPrefab;
+                    break;
+                    
+                default:
+                    prefab = AssetManager.PosterPrefab;
+                    break;
+            }
 
             if (prefab == null)
             {
-                Plugin.Log.LogError($"Failed to find prefab for {name}.");
-                return null;
+                Plugin.Log.LogError($"Failed to find prefab for {posterName}. Falling back to default poster prefab.");
+                prefab = AssetManager.PosterPrefab;
+                
+                if (prefab == null)
+                {
+                    Plugin.Log.LogError("Default poster prefab is also null!");
+                    return null;
+                }
             }
 
             return UnityEngine.Object.Instantiate(prefab);

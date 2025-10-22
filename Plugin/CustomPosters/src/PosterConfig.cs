@@ -36,6 +36,9 @@ namespace CustomPosters
         public ConfigEntry<bool> PerSession { get; private set; } = null!;
         public ConfigEntry<bool> EnableTextureCaching { get; private set; } = null!;
         public ConfigEntry<bool> EnableVideoAudio { get; private set; } = null!;
+
+        public ConfigEntry<bool> UsePoster5VanillaModel { get; private set; } = null!;
+        public ConfigEntry<bool> UseTipsVanillaModel { get; private set; } = null!;
         
         private readonly Dictionary<string, ConfigEntry<bool>> _packEnabledEntries = new();
         private readonly Dictionary<string, ConfigEntry<int>> _packChanceEntries = new();
@@ -52,11 +55,64 @@ namespace CustomPosters
         {
             _configFile.SaveOnConfigSet = false;
 
-            EnableNetworking = _configFile.Bind("1. Settings", "Enable Networking", true, "If true, posters are synced with all players. If false, the mod is client-side only, allowing to play vanilla lobby.");
-            RandomizerModeSetting = _configFile.Bind("1. Settings", "RandomizerMode", RandomizerMode.PerPack, "Controls how textures are randomized. PerPack: Selects one pack randomly for all posters. PerPoster: Randomizes textures for each poster from all enabled packs.");
-            PerSession = _configFile.Bind("1. Settings", "PerSession", false, "When enabled, locks the randomization (PerPack or PerPoster) for the entire game session until the game is restarted. When disabled, randomization refreshes each time the lobby reloads.");
-            EnableTextureCaching = _configFile.Bind("1. Settings", "EnableTextureCaching", false, "If true, caches textures and video paths in memory to improve performance. Disable to reduce memory usage.");
-            EnableVideoAudio = _configFile.Bind("1. Settings", "EnableVideoAudio", false, "If true, enables audio playback for .mp4 poster videos. Disable to mute videos.");
+            EnableNetworking = _configFile.Bind(
+                "1. Settings",
+                "Enable Networking",
+                true,
+                "If true, posters are synced with all players (requires all players to have the mod).\n" +
+                "If false, the mod is client-side only, allowing to play vanilla lobby."
+            );
+
+            RandomizerModeSetting = _configFile.Bind(
+                "1. Settings",
+                "RandomizerMode",
+                RandomizerMode.PerPack,
+                "Controls how textures are randomized.\n" +
+                "PerPack: Selects one pack randomly for all posters.\n" +
+                "PerPoster: Randomizes textures for each poster from all enabled packs."
+            );
+
+            PerSession = _configFile.Bind(
+                "1. Settings",
+                "PerSession",
+                false,
+                "When enabled, locks the randomization (PerPack or PerPoster) for the entire game session until the game is restarted.\n" +
+                "When disabled, randomization refreshes each time the lobby reloads."
+            );
+
+
+            EnableTextureCaching = _configFile.Bind(
+                "1. Settings",
+                "EnableTextureCaching",
+                false,
+                "If true, caches textures and video paths in memory to improve performance.\n" +
+                "Disable to reduce memory usage."
+            );
+
+
+            EnableVideoAudio = _configFile.Bind(
+                "1. Settings",
+                "EnableVideoAudio",
+                false,
+                "If true, enables audio playback for .mp4 poster videos.\n" +
+                "Disable to mute videos."
+            );
+
+            UsePoster5VanillaModel = _configFile.Bind(
+                "1. Settings", 
+                "Use Poster5 Vanilla Model", 
+                true, 
+                "If true, uses the extracted vanilla Lethal Company model for Poster5.\n" +
+                "If false, uses a simple quad model like other posters."
+            );
+            
+            UseTipsVanillaModel = _configFile.Bind(
+                "1. Settings", 
+                "Use Tips Vanilla Model", 
+                true, 
+                "If true, uses the extracted vanilla Lethal Company model for the Tips poster.\n" +
+                "If false, uses a simple quad model like other posters."
+            );
 
             int packCounter = 2;
             foreach (var packPath in Plugin.Service.PosterFolders)
@@ -70,10 +126,24 @@ namespace CustomPosters
                     var mainPackSection = $"{packCounter}. {packName}";
                     var chancesPackSection = $"{packCounter}. {packName} - Chances";
 
-                    var enabledEntry = _configFile.Bind(mainPackSection, "Enabled", true, $"Enable or disable the {packName} pack");
+                    var enabledEntry = _configFile.Bind(
+                        mainPackSection, 
+                        "Enabled", 
+                        true, 
+                        $"Enable or disable the {packName} pack"
+                    );
                     _packEnabledEntries[packName] = enabledEntry;
 
-                    var chanceEntry = _configFile.Bind(chancesPackSection, "Global chance", 0, new ConfigDescription($"Chance of selecting the {packName} pack in PerPack randomization mode [0-100]. Set to 0 to use equal probability with other packs", new AcceptableValueRange<int>(0, 100)));
+                    var chanceEntry = _configFile.Bind(
+                        chancesPackSection, 
+                        "Global chance", 
+                        0, 
+                        new ConfigDescription(
+                            $"Chance of selecting the {packName} pack in PerPack randomization mode.\n" +
+                            $"Set to 0 to use equal probability with other packs.", 
+                            new AcceptableValueRange<int>(0, 100)
+                        )
+                    );
                     _packChanceEntries[packName] = chanceEntry;
                     
                     var allFiles = GetFilesFromPack(packPath);
@@ -84,16 +154,58 @@ namespace CustomPosters
                         var fileName = Path.GetFileName(filePath);
                         var formattedKey = $"{fileNameWithoutExt}-{fileExt}";
 
-                        var fileEnabledEntry = _configFile.Bind(mainPackSection, formattedKey, true, $"Enable or disable poster file {fileName} in pack {packName}");
-                        var fileChanceEntry = _configFile.Bind(chancesPackSection, $"{formattedKey} Chance", 0, new ConfigDescription($"Chance of selecting poster {fileName} in PerPoster randomization mode [0-100]. Set to 0 to use equal probability with other posters.", new AcceptableValueRange<int>(0, 100)));
+                        var fileEnabledEntry = _configFile.Bind(
+                            mainPackSection, 
+                            formattedKey, 
+                            true, 
+                            $"Enable or disable poster file '{fileName}' in pack '{packName}'"
+                        );
+                        
+                        var fileChanceEntry = _configFile.Bind(
+                            chancesPackSection, 
+                            $"{formattedKey} Chance", 
+                            0, 
+                            new ConfigDescription(
+                                $"Chance of selecting poster '{fileName}' in PerPoster mode.\n" +
+                                $"Set to 0 to use equal probability with other posters.", 
+                                new AcceptableValueRange<int>(0, 100)
+                            )
+                        );
 
                         var fileConfig = new FileConfig(fileEnabledEntry, fileChanceEntry);
 
                         if (fileExt == "MP4")
                         {
-                            fileConfig.Volume = _configFile.Bind(mainPackSection, $"{formattedKey} Volume", 20, new ConfigDescription($"Volume for video {fileName} (0-100).", new AcceptableValueRange<int>(0, 100)));
-                            fileConfig.MaxDistance = _configFile.Bind(mainPackSection, $"{formattedKey} MaxDistance", 4.0f, new ConfigDescription($"Maximum distance for audio playback of video {fileName} (1.0-5.0)", new AcceptableValueRange<float>(1.0f, 5.0f)));
-                            fileConfig.AspectRatio = _configFile.Bind(mainPackSection, $"{formattedKey} AspectRatio", VideoAspectRatio.Stretch, $"Aspect ratio mode for video {fileName}. [Stretch] - Stretches video to fit poster area. [FitInside] - Fits video inside poster area without cropping. [FitOutside] - Fits video outside poster area, cropping if necessary. [NoScaling] - Uses original video size without scaling.");
+                            fileConfig.Volume = _configFile.Bind(
+                                mainPackSection, 
+                                $"{formattedKey} Volume", 
+                                Constants.DefaultVideoVolume, 
+                                new ConfigDescription(
+                                    $"Volume for video '{fileName}'.", 
+                                    new AcceptableValueRange<int>(0, 100)
+                                )
+                            );
+                            
+                            fileConfig.MaxDistance = _configFile.Bind(
+                                mainPackSection, 
+                                $"{formattedKey} MaxDistance", 
+                                Constants.DefaultVideoMaxDistance, 
+                                new ConfigDescription(
+                                    $"Maximum distance for audio playback of video '{fileName}'", 
+                                    new AcceptableValueRange<float>(1.0f, 5.0f)
+                                )
+                            );
+                            
+                            fileConfig.AspectRatio = _configFile.Bind(
+                                mainPackSection, 
+                                $"{formattedKey} AspectRatio", 
+                                VideoAspectRatio.Stretch, 
+                                $"Aspect ratio mode for video '{fileName}'.\n" +
+                                $"Stretch: Stretches video to fit poster area.\n" +
+                                $"FitInside: Fits video inside poster area without cropping.\n" +
+                                $"FitOutside: Fits video outside poster area, may crop edges.\n" +
+                                $"NoScaling: Uses original video size without scaling."
+                            );
                         }
                         
                         _fileConfigs[filePath] = fileConfig;
@@ -109,6 +221,8 @@ namespace CustomPosters
             ClearOrphanedEntries();
             _configFile.Save();
             _configFile.SaveOnConfigSet = true;
+            
+            Plugin.Log.LogInfo($"Configuration initialized with {_packEnabledEntries.Count} packs and {_fileConfigs.Count} files");
         }
 
         public bool IsPackEnabled(string packPath)
@@ -168,7 +282,6 @@ namespace CustomPosters
 
         private static IEnumerable<string> GetFilesFromPack(string packPath)
         {
-            var validExtensions = Constants.AllValidExtensions;
             var allFiles = new List<string>();
             var pathsToCheck = Constants.PosterPackSubdirectories
                 .Select(subDir => Path.Combine(packPath, subDir));
@@ -177,7 +290,10 @@ namespace CustomPosters
             {
                 if (Directory.Exists(path))
                 {
-                    allFiles.AddRange(Directory.GetFiles(path).Where(f => validExtensions.Contains(Path.GetExtension(f).ToLower())));
+                    allFiles.AddRange(
+                        Directory.GetFiles(path)
+                            .Where(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    );
                 }
             }
             return allFiles.Distinct().Select(f => Path.GetFullPath(f));
@@ -188,9 +304,11 @@ namespace CustomPosters
             try
             {
                 PropertyInfo? orphanedEntriesProp = AccessTools.Property(typeof(ConfigFile), "OrphanedEntries");
-                if (orphanedEntriesProp != null && orphanedEntriesProp.GetValue(_configFile) is Dictionary<ConfigDefinition, string> orphanedEntries)
+                if (orphanedEntriesProp != null && 
+                    orphanedEntriesProp.GetValue(_configFile) is Dictionary<ConfigDefinition, string> orphanedEntries)
                 {
                     orphanedEntries.Clear();
+                    Plugin.Log.LogDebug("Cleared orphaned config entries");
                 }
             }
             catch (Exception ex)

@@ -7,7 +7,7 @@ namespace CustomPosters.Data
         public static PosterData[] GetLayout()
         {
             bool shipWindows = Plugin.Service.IsShipWindowsInstalled;
-            bool window2 = Plugin.Service.IsWindow2Enabled;
+            bool rightWindow = Plugin.Service.IsRightWindowEnabled;
             bool widerShip = Plugin.Service.IsWiderShipModInstalled;
             string? widerShipSide = Plugin.Service.WiderShipExtendedSide;
             bool twoStoryShip = Plugin.Service.Is2StoryShipModInstalled;
@@ -20,28 +20,28 @@ namespace CustomPosters.Data
 
             if (twoStoryShip)
             {
-                if (shipWindows && widerShip && !Plugin.Service.IsWindow2Enabled)
+                if (shipWindows && widerShip && !Plugin.Service.IsRightWindowEnabled)
                 {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows + WiderShip  (No left window)");
-                    return TwoStoryShip_ShipWindows_WiderShip_NoLeftWindow.Get();
+                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows + WiderShip  (No right window)");
+                    return TwoStoryShip_WiderShip.Get();
                 }
 
                 if (shipWindows && widerShip)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows + WiderShip");
-                    return TwoStoryShip_ShipWindows_WiderShip.Get();
+                    return TwoStoryShip_WiderShip.Get();
                 }
 
                 if (widerShip && !Plugin.Service.EnableLeftWindows)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + WiderShip (No left window)");
-                    return TwoStoryShip_WiderShip_NoLeftWindow.Get();
+                    return TwoStoryShip_WiderShip.Get();
                 }
 
                 if (shipWindows)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows");
-                    return TwoStoryShip_ShipWindows.Get();
+                    return TwoStoryShip.Get();
                 }
 
                 if (widerShip)
@@ -53,27 +53,27 @@ namespace CustomPosters.Data
                 if (!Plugin.Service.EnableRightWindows && !Plugin.Service.EnableLeftWindows)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (No both windows)");
-                    return TwoStoryShip_NoBothWindows.Get();
+                    return TwoStoryShip.Get();
                 }
 
                 if (Plugin.Service.EnableRightWindows && Plugin.Service.EnableLeftWindows)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (All windows)");
-                    return TwoStoryShip_AllWindows.Get();
+                    return TwoStoryShip.Get();
                 }
                 if (!Plugin.Service.EnableRightWindows)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (No right window)");
-                    return TwoStoryShip_NoRightWindow.Get();
+                    return TwoStoryShip.Get();
                 }
                 if (!Plugin.Service.EnableLeftWindows)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (No left window)");
-                    return TwoStoryShip_NoLeftWindow.Get();
+                    return TwoStoryShip.Get();
                 }
             }
 
-            if (shipWindows && window2 && widerShip && widerShipSide == "Left")
+            if (shipWindows && rightWindow && widerShip && widerShipSide == "Left")
             {
                 Plugin.Log.LogInfo("Choosing layout: ShipWindows + WiderShip (Left)");
                 return ShipWindows_WiderShip_Left.Get();
@@ -90,7 +90,7 @@ namespace CustomPosters.Data
                 }
             }
 
-            if (shipWindows && window2)
+            if (shipWindows && rightWindow)
             {
                 Plugin.Log.LogInfo("Choosing layout: ShipWindows");
                 return ShipWindows.Get();

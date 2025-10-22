@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace CustomPosters.Data.PosterLayouts
 {
-    internal static class WiderShip_Left
+    internal static class TwoStoryShip
     {
         public static PosterData[] Get()
         {
@@ -13,16 +13,16 @@ namespace CustomPosters.Data.PosterLayouts
             {
                 new()
                 {
-                    Position = new Vector3(4.6777f, 2.9007f, -19.63f),
-                    Rotation = new Vector3(0, 118.2274f, 0),
+                    Position = new Vector3(4.1886f, 2.9318f, -16.8409f),
+                    Rotation = new Vector3(0, 200.9872f, 0),
                     Scale = new Vector3(0.6391f, 0.4882f, 2f),
                     Name = "Poster1"
                 },
                 new()
                 {
-                    Position = new Vector3(6.4202f, 2.2577f, -10.8226f),
-                    Rotation = new Vector3(0, 0, 0),
-                    Scale = new Vector3(0.7296f, 0.4882f, 2f),
+                    Position = new Vector3(5.3599f, 2.2577f, -9.5555f),
+                    Rotation = new Vector3(0, 308.5657f, 0),
+                    Scale = new Vector3(0.7296f, 0.4896f, 1f),
                     Name = "Poster2"
                 },
                 new()
@@ -34,8 +34,8 @@ namespace CustomPosters.Data.PosterLayouts
                 },
                 new()
                 {
-                    Position = new Vector3(6.4449f, 3.0961f, -10.8221f),
-                    Rotation = new Vector3(0, 0, 2.68f),
+                    Position = new Vector3(5.3599f, 3.0963f, -9.5555f),
+                    Rotation = new Vector3(0, 308.5657f, 2.68f),
                     Scale = new Vector3(0.7289f, 0.9989f, 1f),
                     Name = "Poster4"
                 },
@@ -44,16 +44,16 @@ namespace CustomPosters.Data.PosterLayouts
                     ? new()
                     {
                         // Vanilla model
-                        Position = new Vector3(5.3602f, 2.5882f, -18.3492f),
-                        Rotation = new Vector3(357.7245f, 277.6282f, 180f),
+                        Position = new Vector3(5.4649f, 2.8195f, -17.3176f),
+                        Rotation = new Vector3(1.3609f, 0.2388f, 182.4321f),
                         Scale = new Vector3(0.465f, 0.71f, 1f),
                         Name = "Poster5"
                     }
                     : new()
                     {
                         // Quad
-                        Position = new Vector3(5.3602f, 2.5482f, -18.3793f),
-                        Rotation = new Vector3(0, 118.0114f, 359.8f),
+                        Position = new Vector3(5.5286f, 2.5882f, -17.3541f),
+                        Rotation = new Vector3(0, 200.8318f, 359.8f),
                         Scale = new Vector3(0.5516f, 0.769f, 1f),
                         Name = "Poster5"
                     },
@@ -62,15 +62,15 @@ namespace CustomPosters.Data.PosterLayouts
                     ? new()
                     {
                         // Vanilla model
-                        Position = new Vector3(8.0417f, 2.517138f, -21.9378f),
-                        Rotation = new Vector3(-270.392f, -225.379f, 314.887f),
+                        Position = new Vector3(7.8417f, 2.5171f, -21.9378f),
+                        Rotation = new Vector3(89.6078f, 134.6205f, 314.8865f),
                         Scale = new Vector3(46.75954f, 100f, 70.89838f),
                         Name = "CustomTips"
                     }
                     : new()
                     {
                         // Quad
-                        Position = new Vector3(3.0647f, 2.8174f, -11.7254f),
+                        Position = new Vector3(2.9911f, 2.7174f, -11.7254f),
                         Rotation = new Vector3(0, 0, 358.6752f),
                         Scale = new Vector3(0.8596f, 1.2194f, 1f),
                         Name = "CustomTips"

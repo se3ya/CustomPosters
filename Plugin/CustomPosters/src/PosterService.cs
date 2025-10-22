@@ -18,7 +18,7 @@ namespace CustomPosters
 
         public bool IsBiggerShipInstalled { get; private set; }
         public bool IsShipWindowsInstalled { get; private set; }
-        public bool IsWindow2Enabled { get; private set; }
+        public bool IsRightWindowEnabled { get; private set; }
         public bool IsWiderShipModInstalled { get; private set; }
         public string WiderShipExtendedSide { get; private set; } = "Both";
         public bool Is2StoryShipModInstalled { get; private set; }
@@ -95,14 +95,14 @@ namespace CustomPosters
             if (!IsShipWindowsInstalled) return;
 
             var configPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
-            IsWindow2Enabled = ConfigFileReader.ReadBoolFromSection(
+            IsRightWindowEnabled = ConfigFileReader.ReadBoolFromSection(
                 configPath, 
                 "Right Window (SideRight)", 
                 "1. Enabled = ", 
                 false
             );
     
-            Plugin.Log.LogInfo($"Detected ShipWindows, Right Window - {IsWindow2Enabled}");
+            Plugin.Log.LogInfo($"Detected ShipWindows, Right Window - {IsRightWindowEnabled}");
         }
 
         private void InitializeWiderShipMod()
