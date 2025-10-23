@@ -24,7 +24,6 @@ namespace CustomPosters
         public bool Is2StoryShipModInstalled { get; private set; }
         public bool EnableRightWindows { get; private set; }
         public bool EnableLeftWindows { get; private set; }
-        public Dictionary<string, bool> ShipWindowsStates { get; private set; } = new Dictionary<string, bool>();
 
         public System.Random Rand => _rand;
 
@@ -37,15 +36,6 @@ namespace CustomPosters
 
                 foreach (var folder in Directory.GetDirectories(pluginPath))
                 {
-                    try
-                    {
-                        // Plugin.Log.LogDebug($"Scanning mod folder: {PathUtils.GetPrettyPath(folder)}");
-                        
-                    }
-                    catch (Exception ex)
-                    {
-                        Plugin.Log.LogDebug($"Error while scanning folder path for logging: {ex.Message}");
-                    }
                     var folderName = Path.GetFileName(folder);
                     if (modFolderNames.Contains(folderName))
                     {
@@ -90,6 +80,43 @@ namespace CustomPosters
             {
                 Plugin.Log.LogError($"Error scanning for poster packs: {ex.Message}");
             }
+
+            try
+            {
+                if (_posterFolders.Count > 0)
+                {
+                    var counts = new List<string>();
+                    foreach (var pack in _posterFolders)
+                    {
+                        int count = 0;
+                        try
+                        {
+                            var postersPath = Path.Combine(pack, "posters");
+                            if (Directory.Exists(postersPath))
+                            {
+                                count += Directory.GetFiles(postersPath)
+                                    .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                            }
+
+                            var tipsPath = Path.Combine(pack, "tips");
+                            if (Directory.Exists(tipsPath))
+                            {
+                                count += Directory.GetFiles(tipsPath)
+                                    .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                            }
+
+                            count += Directory.GetFiles(pack)
+                                .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                        }
+                        catch { }
+
+                        counts.Add($"{PathUtils.GetDisplayPackName(pack)}={count}");
+                    }
+
+                    Plugin.Log.LogDebug($"Poster packs discovered: {_posterFolders.Count}; files per pack: {string.Join(", ", counts)}");
+                }
+            }
+            catch { }
 
             InitializeBiggerShip();
             InitializeShipWindows();
@@ -156,7 +183,7 @@ namespace CustomPosters
                 false
             );
     
-            Plugin.Log.LogInfo($"Detected ShipWindows, Right Window - {IsRightWindowEnabled}");
+            Plugin.Log.LogInfo($"Detected ShipWindows, RW - {IsRightWindowEnabled}");
         }
 
         private void InitializeWiderShipMod()

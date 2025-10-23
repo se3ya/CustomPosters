@@ -39,7 +39,10 @@ namespace CustomPosters
 
             if (videoPath != null && System.IO.Path.GetExtension(videoPath).ToLower() == ".mp4")
             {
-                _renderTexture = new RenderTexture(512, 512, 16);
+                _renderTexture = new RenderTexture(
+                    Constants.PosterRenderTextureWidth,
+                    Constants.PosterRenderTextureHeight,
+                    Constants.PosterRenderTextureDepth);
 
                 material.SetTexture("_BaseColorMap", _renderTexture);
 
@@ -106,7 +109,7 @@ namespace CustomPosters
             }
             else
             {
-                Plugin.Log.LogError($"No valid texture or video for poster: {gameObject.name}");
+                Plugin.Log.LogError($"No valid texture for poster: {gameObject.name}");
                 Destroy(gameObject);
             }
         }

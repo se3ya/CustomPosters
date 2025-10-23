@@ -39,7 +39,7 @@ namespace CustomPosters
             if (NetworkManager.Singleton == null) return;
             if (NetworkManager.Singleton.IsHost) return;
 
-            Plugin.Log.LogInfo($"Client received selected pack from host: {PathUtils.GetPrettyPath(packName)}");
+            Plugin.Log.LogDebug($"Client received selected pack from host: {PathUtils.GetPrettyPath(packName)}");
             _selectedPack = packName;
 
             _materialsUpdated = false;
@@ -61,24 +61,8 @@ namespace CustomPosters
 
             if (IsNewLobby)
             {
-                if (!_sessionSeedInitialized)
-                {
-                    _sessionMapSeed = Plugin.ModConfig.PerSession.Value ? StartOfRound.Instance.randomMapSeed : Environment.TickCount;
-                    _sessionSeedInitialized = true;
-                    Plugin.Log.LogDebug($"Seed: {_sessionMapSeed}");
-                }
-
-                int seedToUse;
-                if (Plugin.ModConfig.PerSession.Value)
-                {
-                    seedToUse = _sessionMapSeed;
-                }
-                else
-                {
-                    seedToUse = Environment.TickCount;
-                    _selectedPack = null;
-                }
-
+                InitializeSessionSeedIfNeeded();
+                var seedToUse = ComputeSeedAndMaybeLoadSavePack(Plugin.ModConfig.KeepPackFor.Value);
                 Plugin.Service.SetRandomSeed(seedToUse);
             }
 
@@ -87,6 +71,71 @@ namespace CustomPosters
                 instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
             }
             IsNewLobby = false;
+        }
+
+        private static void InitializeSessionSeedIfNeeded()
+        {
+            var mode = Plugin.ModConfig.KeepPackFor.Value;
+            if (_sessionSeedInitialized) return;
+
+            _sessionMapSeed = (mode == PosterConfig.KeepFor.Session)
+                ? StartOfRound.Instance.randomMapSeed
+                : Environment.TickCount;
+            _sessionSeedInitialized = true;
+            Plugin.Log.LogDebug($"Seed: {_sessionMapSeed}");
+        }
+
+        private static int ComputeSeedAndMaybeLoadSavePack(PosterConfig.KeepFor mode)
+        {
+            switch (mode)
+            {
+                case PosterConfig.KeepFor.Session:
+                    return _sessionMapSeed;
+
+                case PosterConfig.KeepFor.SaveSlot:
+                    string? saveIdForSeed = null;
+                    try { saveIdForSeed = Utils.SavePersistenceManager.TryGetCurrentSaveId(); }
+                    catch { }
+                    var seed = !string.IsNullOrEmpty(saveIdForSeed)
+                        ? Utils.HashUtils.DeterministicHash(saveIdForSeed!)
+                        : Environment.TickCount;
+
+                    TryLoadSavedPack();
+                    return seed;
+
+                case PosterConfig.KeepFor.Lobby:
+                default:
+                    _selectedPack = null;
+                    return Environment.TickCount;
+            }
+        }
+
+        private static void TryLoadSavedPack()
+        {
+            try
+            {
+                var saveId = Utils.SavePersistenceManager.TryGetCurrentSaveId();
+                string? savedPack = null;
+                if (!string.IsNullOrEmpty(saveId))
+                {
+                    savedPack = Utils.SavePersistenceManager.TryLoadSelectedPack(saveId!);
+                }
+
+                if (!string.IsNullOrEmpty(savedPack))
+                {
+                    _selectedPack = savedPack;
+                    Plugin.Log.LogInfo($"Loaded saved pack for save '{saveId}': {PathUtils.GetPrettyPath(_selectedPack)}");
+                }
+                else
+                {
+                    _selectedPack = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _selectedPack = null;
+                Plugin.Log.LogDebug($"SaveSlot load skipped: {ex.Message}");
+            }
         }
 
         private static async Task LoadTextureAsync(string filePath, Action<(Texture2D? texture, string? filePath)> onComplete)
@@ -203,7 +252,6 @@ namespace CustomPosters
             var hangarShip = GameObject.Find("Environment/HangarShip");
             if (hangarShip == null)
             {
-                Plugin.Log.LogError("HangarShip GameObject not found");
                 yield break;
             }
 
@@ -235,7 +283,24 @@ namespace CustomPosters
 
                 if (shouldSelectPack)
                 {
-                    if (!Plugin.ModConfig.PerSession.Value || _selectedPack == null || !enabledPacks.Contains(_selectedPack))
+                    var mode = Plugin.ModConfig.KeepPackFor.Value;
+                    if (mode == PosterConfig.KeepFor.SaveSlot)
+                    {
+                        var curId = Utils.SavePersistenceManager.TryGetCurrentSaveId();
+                        if (string.IsNullOrEmpty(curId))
+                        {
+                            _selectedPack = null;
+                        }
+                    }
+                    bool needNewSelection = mode switch
+                    {
+                        PosterConfig.KeepFor.Lobby => true,
+                        PosterConfig.KeepFor.Session => _selectedPack == null || !enabledPacks.Contains(_selectedPack),
+                        PosterConfig.KeepFor.SaveSlot => _selectedPack == null || !enabledPacks.Contains(_selectedPack),
+                        _ => true
+                    };
+
+                    if (needNewSelection)
                     {
                         var candidatePacks = new List<string>(enabledPacks);
                         string? chosen = null;
@@ -252,6 +317,27 @@ namespace CustomPosters
                         }
 
                         _selectedPack = chosen;
+
+                        if (!string.IsNullOrEmpty(_selectedPack) && mode == PosterConfig.KeepFor.SaveSlot)
+                        {
+                            try
+                            {
+                                var saveId = Utils.SavePersistenceManager.TryGetCurrentSaveId();
+                                if (!string.IsNullOrEmpty(saveId))
+                                {
+                                    Utils.SavePersistenceManager.SaveSelectedPack(saveId!, _selectedPack!);
+                                    Plugin.Log.LogInfo($"Saved selected pack for save '{saveId}'");
+                                }
+                                else
+                                {
+                                    Plugin.Log.LogDebug("PerSave: No valid saveId yet; not persisting selection.");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Plugin.Log.LogDebug($"SaveSlot save skipped: {ex.Message}");
+                            }
+                        }
                     }
 
                     if (!string.IsNullOrEmpty(_selectedPack) && Plugin.ModConfig.EnableNetworking.Value)
@@ -276,7 +362,6 @@ namespace CustomPosters
             }
             else
             {
-                Plugin.Service.SetRandomSeed(StartOfRound.Instance.randomMapSeed);
                 packsToUse = enabledPacks;
                 Plugin.Log.LogInfo("PerPoster mode enabled.");
             }
@@ -418,7 +503,7 @@ namespace CustomPosters
                 }
                 else
                 {
-                    Plugin.Log.LogWarning($"No enabled texture or video found for {posterData[i].Name}. Destroying the poster");
+                    Plugin.Log.LogWarning($"No enabled texture found for {posterData[i].Name}. Destroying the poster");
                     UnityEngine.Object.Destroy(poster);
                 }
                 yield return null;
@@ -442,7 +527,7 @@ namespace CustomPosters
                 if (posterPlane != null)
                 {
                     posterPlane.SetActive(true);
-                    Plugin.Log.LogWarning("Re-enabled vanilla Plane.001 poster due to no custom posters loaded");
+                    Plugin.Log.LogWarning("Re-enabled vanilla Plane.001 poster due to no textures loaded");
                 }
             }
         }

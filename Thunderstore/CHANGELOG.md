@@ -5,20 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.3.0] - 2025-10-22 - "Vanilla models"
+## [4.0.0] - 2025-10-24 - "yuh"
 ### Added
-- Added the vanilla meshes of Poster5 and Tips.
-  - There's an option in the `Settings` section to use one of them or neither of them.
-- Support for transparent image backgrounds has been added. Instead of transparent backgrounds appearing black, they are now fully transparent.
-- Added support for multiple poster packs within a single mod folder.
-  - Backward compatibility maintained for existing poster packs.
-- Added multi-pack support.
-  - Multiple packs inside 1 mod can be detected.
+- Added vanilla meshes of Poster5 and Tips.
+  - There's an option in the `Settings` section to use both of them, one of them or neither of them.
+- Added keeping packs or posters per *save slot* in a new setting `KeepPackFor`.
+- Added support for multiple poster packs within a single mod.
+  - So, basically create multiple folders in your mod folder and place posters in them as shown in the README and they will count as poster packs.
 
 ### Changed
-- Poster positions and rotation of ShipWindows, TwoStoryShip, and WiderShipMod were improved to be closer to the original.
+- Replaced `PerSession` toggle option with `KeepPackFor` dropdown option to choose between `Lobby`, `Session` and *`SaveSlot`*.
+- Poster positions and rotation of ShipWindows, TwoStoryShip, and WiderShipMod were improved to be closer to the vanilla.
 - Reduced default volume of .mp4 posters from *20* to *10*.
 - Reduced default max distance of .mp4 posters from *4* to *3.5*.
+
+### Fixed
+- Fixed posters not randomizing with `PerPoster` mode.
+- Fixed transparent image backgrounds being black.
+
 
 ## [3.2.0] - 2025-10-15 - "Synchronization"
 ### Added

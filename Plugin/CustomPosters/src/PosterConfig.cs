@@ -30,10 +30,12 @@ namespace CustomPosters
         public enum RandomizerMode { PerPack, PerPoster }
         [Serializable]
         public enum VideoAspectRatio { Stretch, FitInside, FitOutside, NoScaling }
+        [Serializable]
+        public enum KeepFor { Lobby, Session, SaveSlot }
 
         public ConfigEntry<bool> EnableNetworking { get; private set; } = null!;
         public ConfigEntry<RandomizerMode> RandomizerModeSetting { get; private set; } = null!;
-        public ConfigEntry<bool> PerSession { get; private set; } = null!;
+        public ConfigEntry<KeepFor> KeepPackFor { get; private set; } = null!;
         public ConfigEntry<bool> EnableTextureCaching { get; private set; } = null!;
         public ConfigEntry<bool> EnableVideoAudio { get; private set; } = null!;
 
@@ -67,43 +69,21 @@ namespace CustomPosters
                 "1. Settings",
                 "Enable Networking",
                 true,
-                "If true, posters are synced with all players (requires all players to have the mod).\n" +
-                "If false, the mod is client-side only, allowing to play vanilla lobby."
+                "Sync posters with all players (requires all to have the mod); false = client-side, makes compatible with vanilla lobbies."
             );
 
             RandomizerModeSetting = _configFile.Bind(
                 "1. Settings",
                 "RandomizerMode",
                 RandomizerMode.PerPack,
-                "Controls how textures are randomized.\n" +
-                "PerPack: Selects one pack randomly for all posters.\n" +
-                "PerPoster: Randomizes textures for each poster from all enabled packs."
+                "Controls randomization: PerPack selects one pack for all posters; PerPoster randomizes each poster from enabled packs."
             );
 
-            PerSession = _configFile.Bind(
+            KeepPackFor = _configFile.Bind(
                 "1. Settings",
-                "PerSession",
-                false,
-                "When enabled, locks the randomization (PerPack or PerPoster) for the entire game session until the game is restarted.\n" +
-                "When disabled, randomization refreshes each time the lobby reloads."
-            );
-
-
-            EnableTextureCaching = _configFile.Bind(
-                "1. Settings",
-                "EnableTextureCaching",
-                false,
-                "If true, caches textures and video paths in memory to improve performance.\n" +
-                "Disable to reduce memory usage."
-            );
-
-
-            EnableVideoAudio = _configFile.Bind(
-                "1. Settings",
-                "EnableVideoAudio",
-                false,
-                "If true, enables audio playback for .mp4 poster videos.\n" +
-                "Disable to mute videos."
+                "Keep pack for",
+                KeepFor.Lobby,
+                "Keeping selection: Lobby = reroll each lobby; Session = until game restart; Save slot = per save file."
             );
 
             VanillaModelSelection = _configFile.Bind(
@@ -111,12 +91,22 @@ namespace CustomPosters
                 "Vanilla Model",
                 VanillaModelOption.Both,
                 new ConfigDescription(
-                    "Choose which posters use the extracted vanilla Lethal Company model.\n" +
-                    "None: All posters use simple quad models.\n" +
-                    "Poster5: Only Poster5 uses vanilla model.\n" +
-                    "Tips: Only Tips poster uses vanilla model.\n" +
-                    "Both: Both Poster5 and Tips use vanilla models."
+                "Choose vanilla LC mesh: None (use quads), Poster5, Tips, or Both."
                 )
+            );
+
+            EnableVideoAudio = _configFile.Bind(
+                "1. Settings",
+                "EnableVideoAudio",
+                false,
+                "Enable audio for .mp4 poster videos; disable to mute."
+            );
+
+            EnableTextureCaching = _configFile.Bind(
+                "1. Settings",
+                "EnableTextureCaching",
+                false,
+                "Cache textures/videos in memory to improve performance; disable to reduce memory usage."
             );
 
             int packCounter = 2;
@@ -143,8 +133,7 @@ namespace CustomPosters
                         "Global chance",
                         0,
                         new ConfigDescription(
-                            $"Chance of selecting the {packName} pack in PerPack randomization mode.\n" +
-                            $"Set to 0 to use equal probability with other packs.",
+                            $"Chance of selecting the {packName} pack in PerPack mode; 0 = equal probability with other packs.",
                             new AcceptableValueRange<int>(0, 100)
                         )
                     );
@@ -170,8 +159,7 @@ namespace CustomPosters
                             $"{formattedKey} Chance",
                             0,
                             new ConfigDescription(
-                                $"Chance of selecting poster '{fileName}' in PerPoster mode.\n" +
-                                $"Set to 0 to use equal probability with other posters.",
+                                $"Chance of selecting poster '{fileName}' in PerPoster mode; 0 = equal probability with other posters.",
                                 new AcceptableValueRange<int>(0, 100)
                             )
                         );
@@ -204,11 +192,7 @@ namespace CustomPosters
                                 mainPackSection,
                                 $"{formattedKey} AspectRatio",
                                 VideoAspectRatio.Stretch,
-                                $"Aspect ratio mode for video '{fileName}'.\n" +
-                                $"Stretch: Stretches video to fit poster area.\n" +
-                                $"FitInside: Fits video inside poster area without cropping.\n" +
-                                $"FitOutside: Fits video outside poster area, may crop edges.\n" +
-                                $"NoScaling: Uses original video size without scaling."
+                                $"Aspect ratio for video '{fileName}': Stretch (fill), FitInside (no crop), FitOutside (may crop), NoScaling (original size)."
                             );
                         }
 

@@ -6,22 +6,22 @@ namespace CustomPosters.Networking
 {
     internal static class PosterSyncManager
     {
-        private const string PackSyncIdentifier = "CustomPosters_SyncPack";
+        private const string PackSyncIdentifier = Constants.PackSyncIdentifier;
         private static readonly LNetworkMessage<string> SyncPackMessage = LNetworkMessage<string>.Connect(
-            identifier: PackSyncIdentifier,
+            identifier: Constants.PackSyncIdentifier,
             onClientReceived: PosterManager.SetPackForClients
         );
 
-        private const string VideoRequestIdentifier = "CustomPosters_RequestVideoTime";
-        private const string VideoSyncIdentifier = "CustomPosters_SyncVideoTime";
+        private const string VideoRequestIdentifier = Constants.VideoRequestIdentifier;
+        private const string VideoSyncIdentifier = Constants.VideoSyncIdentifier;
 
         private static readonly LNetworkMessage<string> RequestVideoTimeMessage = LNetworkMessage<string>.Connect(
-            identifier: VideoRequestIdentifier,
+            identifier: Constants.VideoRequestIdentifier,
             onServerReceived: OnVideoTimeRequested
         );
 
         private static readonly LNetworkMessage<VideoSyncData> SyncVideoTimeMessage = LNetworkMessage<VideoSyncData>.Connect(
-            identifier: VideoSyncIdentifier,
+            identifier: Constants.VideoSyncIdentifier,
             onClientReceived: OnVideoTimeReceived
         );
         
@@ -41,7 +41,7 @@ namespace CustomPosters.Networking
 
             if (NetworkManager.Singleton.IsHost)
             {
-                Plugin.Log.LogInfo($"[Host] Sending selected pack to all clients: {PathUtils.GetPrettyPath(packName)}");
+                Plugin.Log.LogDebug($"Sending selected pack to all clients: {PathUtils.GetPrettyPath(packName)}");
                 SyncPackMessage.SendClients(packName);
             }
         }
@@ -63,11 +63,11 @@ namespace CustomPosters.Networking
             {
                 if (!string.IsNullOrEmpty(PosterManager.SelectedPack))
                 {
-                    Plugin.Log.LogInfo($"[Host] New client joined, sending pack: {PathUtils.GetPrettyPath(PosterManager.SelectedPack)}");
+                    Plugin.Log.LogDebug($"New client joined, sending pack: {PathUtils.GetPrettyPath(PosterManager.SelectedPack)}");
                     SyncPackMessage.SendClient(PosterManager.SelectedPack, clientId);
                 }
             }
-    }
+        }
 
         public static void RequestVideoTimeFromServer(string posterName)
         {
@@ -82,7 +82,7 @@ namespace CustomPosters.Networking
                 return;
             }
 
-            Plugin.Log.LogDebug($"[Client] Requesting video time for poster: {posterName}");
+            Plugin.Log.LogDebug($"Requesting video time for poster: {posterName}");
             RequestVideoTimeMessage.SendServer(posterName);
         }
 
@@ -91,7 +91,7 @@ namespace CustomPosters.Networking
             double? time = PosterManager.GetVideoTimeForPoster(posterName);
             if (time.HasValue)
             {
-                Plugin.Log.LogDebug($"[Sync] Host received request for '{posterName}'. Sending time: {time.Value} to client {clientId}");
+                Plugin.Log.LogDebug($"Host received request for '{posterName}'. Sending time: {time.Value} to client {clientId}");
                 var syncData = new VideoSyncData { PosterName = posterName, VideoTime = time.Value };
                 SyncVideoTimeMessage.SendClient(syncData, clientId);
             }
@@ -99,7 +99,7 @@ namespace CustomPosters.Networking
 
         private static void OnVideoTimeReceived(VideoSyncData syncData)
         {
-            Plugin.Log.LogDebug($"[Sync] Client received sync time for '{syncData.PosterName}': {syncData.VideoTime}");
+            Plugin.Log.LogDebug($"Client received sync time for '{syncData.PosterName}': {syncData.VideoTime}");
             PosterManager.SetVideoTimeForPoster(syncData.PosterName, syncData.VideoTime);
         }
     }

@@ -28,12 +28,12 @@
 
 ## Features
 - Overrides the vanilla posters in the ship with your own images.
-- Supports multiple poster packs at once.
+- Supports multiple poster pack mods at once.
+- Supports multiple poster packs in a single mod.
 - Supports most of the image formats and `.mp4` video format.
 - Ability to enable/disable packs and posters, change chances of the packs and posters, toggleable networking, change volume, max distance and aspect ratio of `.mp4` posters via config file.
 - Compatible with **ShipWindows**, **2 sToRy ShIp**, **BiggerShip**, and **WiderShipMod**.
 - Posters and video playback is synchronized with clients.
-- Maximum optimization.
 - [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**.
   - *Sizes of the posters will be slightly incorrect after cropping!*
 
@@ -46,16 +46,35 @@
 1. Create a folder structure for your custom poster pack in the `BepInEx/plugins` directory as shown below.
 2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly - *`Poster1.png`, `Poster2.mp4`, `Poster3.bmp`, `Poster4.jpeg`, `Poster5.png`* and *`CustomTips.jpg`*.
 
-**Folder Structure**:
+**Single Pack Folder Structure**:
 _<p><small>Poster image names must match the structure below.</small></p>_
 
 
+       BepInEx/
+        ├── plugins/
+        │   └──── YourPosterModName/
+        │          └── CustomPosters/
+        │                ├── posters/
+        │                │    └── Poster1.png, Poster2.png, Poster3.png, Poster4.png, Poster5.png
+        │                └── tips/
+        │                     └── CustomTips.png
+        └── ...                  
+
+
+**Mutliple Pack Folder Structure**:
+_<p><small>Poster image names must match the structure below.</small></p>_
 
    
        BepInEx/
         ├── plugins/
-        │   └──── YourModName/
-        │          └── CustomPosters/
+        │   └──── YourPosterModName/
+        │          ├── PosterPack1/
+        │          │     ├── posters/
+        │          │     │    └── Poster1.png, Poster2.png, Poster3.png, Poster4.png, Poster5.png
+        │          │     └── tips/
+        │          │          └── CustomTips.png
+        │          │
+        │          └── PosterPack2/
         │                ├── posters/
         │                │    └── Poster1.png, Poster2.png, Poster3.png, Poster4.png, Poster5.png
         │                └── tips/
@@ -77,10 +96,16 @@ _<p><small>Poster image names must match the structure below.</small></p>_
 - **Randomier mode**:
   - *PerPack (default)*: Selects one pack randomly for all posters.
   - *PerPoster*: Randomizes textures for each poster from all enabled packs.
-- **Per session**:
-  - *False (default)*: Randomizes posters only when the lobby reloads.
-  - *True*: Randomized posters only when restarting the game.
-- **Enable/Disable Packs and Posters**:
+- **Keep Pack For**:
+  - *Lobby (default)*: Randomized posters only when the lobby reloads.
+  - *Session*: Randomized posters only when restarting the game.
+  - *SaveSlot*: Randomized posters only when creating a new save slot.
+- **Vanilla model**:
+  - *Both (default)*: Uses both *Poster5* and *Tips* vanilla meshes.
+  - *Poster5*: Uses only *Poster5* vanilla mesh.
+  - *Tips*: Uses only *Tips* vanilla mesh.
+  - *None*: Uses none of the vanilla meshes and uses quads.
+- **Toggle Packs and Posters**:
   - Each poster pack has an `Enabled` setting for poster pack and posters. Set to `false` to disable a pack or a poster.
 - **Global Chance**:
   - Assign a `Global Chance` value (0–100) for each pack. If any pack has a `Global Chance > 0`, weighted random selection is used.

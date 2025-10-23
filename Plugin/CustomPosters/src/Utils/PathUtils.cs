@@ -9,10 +9,10 @@ namespace CustomPosters.Utils
             if (string.IsNullOrEmpty(fullPath))
                 return string.Empty;
 
-            int pluginsIndex = fullPath.IndexOf("plugins", StringComparison.OrdinalIgnoreCase);
+            int pluginsIndex = fullPath.IndexOf(Constants.PluginsFolderName, StringComparison.OrdinalIgnoreCase);
             if (pluginsIndex != -1)
             {
-                return fullPath.Substring(pluginsIndex + "plugins".Length + 1);
+                return fullPath.Substring(pluginsIndex + Constants.PluginsFolderName.Length + 1);
             }
             
             return fullPath;
@@ -41,7 +41,7 @@ namespace CustomPosters.Utils
             if (!string.IsNullOrEmpty(parent))
             {
                 var parentName = System.IO.Path.GetFileName(parent);
-                if (string.Equals(folderName, "CustomPosters", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(folderName, Constants.SinglePackFolderName, StringComparison.OrdinalIgnoreCase))
                 {
                     return GetPackName(parentName);
                 }

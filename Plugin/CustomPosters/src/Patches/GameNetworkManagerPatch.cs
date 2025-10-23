@@ -17,7 +17,7 @@ namespace CustomPosters.Patches
             {
                 if (NetworkManager.Singleton != null)
                 {
-                    Plugin.Log.LogInfo("Networking enabled - registering callbacks.");
+                    Plugin.Log.LogInfo("Networking is enabled.");
                     NetworkManager.Singleton.OnClientConnectedCallback += PosterSyncManager.OnClientConnected;
                 }
                 else
