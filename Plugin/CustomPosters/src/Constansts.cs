@@ -10,17 +10,6 @@ namespace CustomPosters
         // common folder names
         public const string PluginsFolderName = "plugins";
 
-        // poster pack subdirectories
-        public static readonly string[] PosterPackSubdirectories = 
-        { 
-            "*/posters",  // multi-pack
-            "*/tips",     // multi-pack
-            "CustomPosters/posters",  // single-pack
-            "CustomPosters/tips",     // single-pack
-            "*/CustomPosters/posters", // single-pack
-            "*/CustomPosters/tips"     // single-pack
-        };
-
         // video settings
         public const int DefaultVideoVolume = 10;
         public const float DefaultVideoMaxDistance = 3.5f;

@@ -7,7 +7,7 @@ repository = "https://thunderstore.io"
 [package]
 namespace = "seechela"
 name = "CustomPosters"
-description = "Replaces the default posters in the ship with custom posters. You can add your own images!"
+description = "Allows you to replaces the default posters in the ship with customized ones!"
 websiteUrl = "https://github.com/se3ya/CustomPosters"
 containsNswContent = false
 
