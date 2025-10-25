@@ -4,3 +4,4 @@
   - option to make them buyable, so they are hidden first.
   - option to make posters always unlocked if Buyable option is enabled.
 - Clickable posters.
+- .mp4 video links and images links.
