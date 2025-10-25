@@ -76,7 +76,6 @@ namespace CustomPosters.Networking
                 Plugin.Log.LogDebug("Networking disabled, skipping video time sync request");
                 return;
             }
-
             if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsHost)
             {
                 return;

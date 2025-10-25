@@ -40,7 +40,12 @@ namespace CustomPosters
             if (NetworkManager.Singleton.IsHost) return;
 
             Plugin.Log.LogDebug($"Client received selected pack from host: {PathUtils.GetPrettyPath(packName)}");
-            _selectedPack = packName;
+            _selectedPack = LocalPackPath(packName);
+            if (string.IsNullOrEmpty(_selectedPack))
+            {
+                Plugin.Log.LogWarning("Could not resolve host selected pack on client. Keeping vanilla posters.");
+                return;
+            }
 
             _materialsUpdated = false;
             StartOfRound instance = StartOfRound.Instance;
@@ -50,16 +55,36 @@ namespace CustomPosters
             }
         }
 
+        private static string? LocalPackPath(string hostPackIdentifier)
+        {
+            try
+            {
+                var hostDisplay = PathUtils.GetDisplayPackName(hostPackIdentifier);
+                var hostFolder = Path.GetFileName(hostPackIdentifier.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+
+                foreach (var localPath in Plugin.Service.PosterFolders)
+                {
+                    if (string.Equals(PathUtils.GetDisplayPackName(localPath), hostDisplay, StringComparison.OrdinalIgnoreCase))
+                        return localPath;
+                }
+                foreach (var localPath in Plugin.Service.PosterFolders)
+                {
+                    if (string.Equals(Path.GetFileName(localPath), hostFolder, StringComparison.OrdinalIgnoreCase))
+                        return localPath;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogDebug($"LocalPackPath error: {ex.Message}");
+            }
+            return null;
+        }
+
         public static void OnRoundStart(StartOfRound instance)
         {
             _materialsUpdated = false;
 
-            if (!ShouldActAsHost) 
-            {
-                return;
-            }
-
-            if (IsNewLobby)
+            if (IsNewLobby && ShouldActAsHost)
             {
                 InitializeSessionSeedIfNeeded();
                 var seedToUse = ComputeSeedAndMaybeLoadSavePack(Plugin.ModConfig.KeepPackFor.Value);
@@ -201,13 +226,13 @@ namespace CustomPosters
             
             switch (posterName)
             {
-                case "CustomTips":
+                case Constants.PosterNameCustomTips:
                     prefab = Plugin.ModConfig.UseTipsVanillaModel 
                         ? AssetManager.TipsPrefab 
                         : AssetManager.PosterPrefab;
                     break;
                     
-                case "Poster5":
+                case Constants.PosterNamePoster5:
                     prefab = Plugin.ModConfig.UsePoster5VanillaModel
                         ? AssetManager.Poster5Prefab 
                         : AssetManager.PosterPrefab;
@@ -262,9 +287,11 @@ namespace CustomPosters
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
             
             var posterData = PosterLayoutProvider.GetLayout();
-            
+
             var enabledPacks = Plugin.Service.PosterFolders.Where(folder => Plugin.ModConfig.IsPackEnabled(folder)).ToList();
-            if (enabledPacks.Count == 0)
+            
+            bool usingForcedHostPack = Plugin.ModConfig.EnableNetworking.Value && !ShouldActAsHost && !string.IsNullOrEmpty(_selectedPack);
+            if (enabledPacks.Count == 0 && !usingForcedHostPack)
             {
                 Plugin.Log.LogWarning("No enabled packs found");
                 if (posterPlane != null)
