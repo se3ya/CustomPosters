@@ -29,11 +29,11 @@ namespace CustomPosters
 
             Log.LogInfo($"Initializing {MyPluginInfo.PLUGIN_NAME}");
 
-            AssetManager.LoadAssets();  
+            AssetManager.LoadAssets();
 
             ModConfig = new PosterConfig(Config);
             Service = new PosterService();
-            
+
             ModConfig.Initialize();
 
             Log.LogInfo("Applying patches");

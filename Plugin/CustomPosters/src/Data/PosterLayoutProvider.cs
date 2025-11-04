@@ -13,6 +13,7 @@ namespace CustomPosters.Data
             bool twoStoryShip = Plugin.Service.Is2StoryShipModInstalled;
             bool enableRightWindows = Plugin.Service.EnableRightWindows;
             bool enableLeftWindows = Plugin.Service.EnableLeftWindows;
+            bool twoStoryLegacy = twoStoryShip && string.Equals(Plugin.Service.TwoStoryShipLayout, "Legacy", System.StringComparison.OrdinalIgnoreCase);
 
             if (Plugin.Service.IsBiggerShipInstalled)
             {
@@ -22,6 +23,15 @@ namespace CustomPosters.Data
 
             if (twoStoryShip)
             {
+                if (twoStoryLegacy)
+                {
+                    if (widerShip)
+                    {
+                        Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (Legacy) + WiderShip");
+                        return PosterLayouts.Legacy.TwoStoryShip_WiderShip.Get();
+                    }
+                }
+
                 if (shipWindows && widerShip && !rightWindow)
                 {
                     Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows + WiderShip  (No right window)");
@@ -86,9 +96,9 @@ namespace CustomPosters.Data
                 Plugin.Log.LogInfo($"Choosing layout: WiderShip - {widerShipSide}");
                 switch (widerShipSide)
                 {
-                        case Constants.WiderShipSideBoth: return WiderShip_Both.Get();
-                        case Constants.WiderShipSideRight: return WiderShip_Right.Get();
-                        case Constants.WiderShipSideLeft: return WiderShip_Left.Get();
+                    case Constants.WiderShipSideBoth: return WiderShip_Both.Get();
+                    case Constants.WiderShipSideRight: return WiderShip_Right.Get();
+                    case Constants.WiderShipSideLeft: return WiderShip_Left.Get();
                 }
             }
 

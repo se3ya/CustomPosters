@@ -105,10 +105,55 @@ namespace CustomPosters.Utils
             return defaultValue;
         }
 
+        public static string ReadStringFromSection(string configPath, string sectionHeader, string key, string defaultValue = "")
+        {
+            if (!File.Exists(configPath))
+            {
+                return defaultValue;
+            }
+
+            try
+            {
+                bool inSection = false;
+                foreach (var rawLine in File.ReadAllLines(configPath))
+                {
+                    var line = rawLine.Trim();
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    // Detect section start
+                    if (line.StartsWith("[") && line.EndsWith("]"))
+                    {
+                        var current = line.Substring(1, line.Length - 2).Trim();
+                        inSection = string.Equals(current, sectionHeader, StringComparison.OrdinalIgnoreCase);
+                        continue;
+                    }
+
+                    if (!inSection) continue;
+
+                    // Match key inside section
+                    if (line.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var idx = line.IndexOf('=');
+                        if (idx >= 0 && idx + 1 < line.Length)
+                        {
+                            var value = line.Substring(idx + 1).Trim();
+                            return value;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                try { CustomPosters.Plugin.Log.LogDebug($"ReadStringFromSection error for '{sectionHeader}:{key}': {ex.Message}"); } catch { }
+            }
+
+            return defaultValue;
+        }
+
         public static Dictionary<string, string> ReadMultipleValues(string configPath, params string[] keys)
         {
             var results = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
+
             if (!File.Exists(configPath))
             {
                 return results;
@@ -128,7 +173,7 @@ namespace CustomPosters.Utils
                         {
                             var value = trimmed.Substring(key.Length).Trim();
                             results[key] = value;
-                            
+
                             if (results.Count == keys.Length)
                             {
                                 return results;

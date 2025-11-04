@@ -24,6 +24,7 @@ namespace CustomPosters
         public bool Is2StoryShipModInstalled { get; private set; }
         public bool EnableRightWindows { get; private set; }
         public bool EnableLeftWindows { get; private set; }
+        public string TwoStoryShipLayout { get; private set; } = "Default";
 
         public System.Random Rand => _rand;
 
@@ -177,12 +178,12 @@ namespace CustomPosters
 
             var configPath = Path.Combine(Paths.ConfigPath, "TestAccount666.ShipWindows.cfg");
             IsRightWindowEnabled = ConfigFileReader.ReadBoolFromSection(
-                configPath, 
-                "Right Window (SideRight)", 
-                "1. Enabled = ", 
+                configPath,
+                "Right Window (SideRight)",
+                "1. Enabled = ",
                 false
             );
-    
+
             Plugin.Log.LogInfo($"Detected ShipWindows, RW - {IsRightWindowEnabled}");
         }
 
@@ -195,7 +196,7 @@ namespace CustomPosters
             {
                 var widerShipType = Type.GetType("WiderShipMod");
                 var extendedSideField = widerShipType?.GetField("ExtendedSide", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-        
+
                 if (extendedSideField != null)
                 {
                     WiderShipExtendedSide = (string)extendedSideField.GetValue(null);
@@ -209,7 +210,7 @@ namespace CustomPosters
             {
                 ReadWiderShipConfigFile();
             }
-    
+
             Plugin.Log.LogInfo($"Detected WiderShip, ES - {WiderShipExtendedSide}");
         }
 
@@ -276,6 +277,17 @@ namespace CustomPosters
             EnableLeftWindows = values.TryGetValue("Enable Left Windows = ", out var leftValue)
                 ? bool.Parse(leftValue)
                 : true;
+
+            var layout = ConfigFileReader.ReadStringFromSection(
+                configPath,
+                "Wider + 2-Story Exclusive",
+                "Ship Layout = ",
+                "Default"
+            );
+            if (!string.IsNullOrEmpty(layout))
+            {
+                TwoStoryShipLayout = layout.Trim();
+            }
         }
 
         public void SetRandomSeed(int seed)

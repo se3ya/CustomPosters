@@ -4,7 +4,7 @@
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<AssemblyName>CustomPosters</AssemblyName>
 		<Description>Replaces the default posters in the ship with custom posters</Description>
-		<Version>4.0.1</Version>
+		<Version>4.0.2</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>latest</LangVersion>
 
