@@ -120,7 +120,6 @@ namespace CustomPosters.Utils
                     var line = rawLine.Trim();
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    // Detect section start
                     if (line.StartsWith("[") && line.EndsWith("]"))
                     {
                         var current = line.Substring(1, line.Length - 2).Trim();
@@ -130,7 +129,6 @@ namespace CustomPosters.Utils
 
                     if (!inSection) continue;
 
-                    // Match key inside section
                     if (line.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                     {
                         var idx = line.IndexOf('=');
