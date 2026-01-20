@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.2] - 2025-11-04 - "Bluh"
+## [4.0.3] - 2026-01-21
+
+### Fixed
+
+- mp4 posters always overriding image posters when both added for the same poster slot
+
+## [4.0.2] - 2025-11-04
 
 ### Added
 
@@ -15,13 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Slightly improved Poster5 rotation when using 2StoryShip.
 
-## [4.0.1] - 2025-10-25 - "Bluh"
+## [4.0.1] - 2025-10-25
 
 ### Fixed
 
 - Fixed clients not having host selected posters (maybe?).
 
-## [4.0.0] - 2025-10-24 - "yuh"
+## [4.0.0] - 2025-10-24
 
 ### Added
 

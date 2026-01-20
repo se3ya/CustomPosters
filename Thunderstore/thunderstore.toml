@@ -12,7 +12,7 @@ websiteUrl = "https://github.com/se3ya/CustomPosters"
 containsNswContent = false
 
 [package.dependencies]
-BepInEx-BepInExPack = "5.4.2100"
+BepInEx-BepInExPack = "5.4.2304"
 xilophor-LethalNetworkAPI = "3.3.2"
 
 [build]

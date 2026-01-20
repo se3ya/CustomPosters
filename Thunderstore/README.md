@@ -5,14 +5,14 @@
 
 ## Features
 
-- Overrides the vanilla posters in the ship with your own images.
-- Supports multiple poster pack mods at once.
-- Supports multiple poster packs in a single mod.
-- Supports most of the image formats and `.mp4` video format.
-- Ability to enable/disable packs and posters, change chances of the packs and posters, toggleable networking, change volume, max distance and aspect ratio of `.mp4` posters via config file.
-- Compatible with **ShipWindows**, **2 sToRy ShIp**, **BiggerShip**, and **WiderShipMod**.
-- Posters and video playback is synchronized with clients.
-- [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**.
+- Overrides the vanilla posters in the ship with your own images
+- Supports multiple poster pack mods at once
+- Supports multiple poster packs in a single mod
+- Supports most of the image formats and `.mp4` video format
+- Ability to enable/disable packs and posters, change chances of the packs and posters, toggleable networking, change volume, max distance and aspect ratio of `.mp4` posters via config file
+- Compatible with **ShipWindows**, **2 sToRy ShIp**, **BiggerShip**, and **WiderShipMod**
+- Posters and video playback is synchronized with clients
+- [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**
   - _Sizes of the posters will be slightly incorrect after cropping!_
 
 ---
@@ -21,15 +21,15 @@
 
 ### Supported formats
 
-- `.png`, `.jpg`, `.jpeg`, `.bmp`, `.mp4`.
+- `.png`, `.jpg`, `.jpeg`, `.bmp`, `.mp4`
 
 ### Steps
 
-1. Create a folder structure for your custom poster pack in the `BepInEx/plugins` directory as shown below.
-2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly - _`Poster1.png`, `Poster2.mp4`, `Poster3.bmp`, `Poster4.jpeg`, `Poster5.png`_ and _`CustomTips.jpg`_.
+1. Create a folder structure for your custom poster pack in the `BepInEx/plugins` directory as shown below
+2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly - _`Poster1.png`, `Poster2.mp4`, `Poster3.bmp`, `Poster4.jpeg`, `Poster5.png`_ and _`CustomTips.jpg`_
 
 **Single Pack Folder Structure**:
-_<p><small>Poster image names must match the structure below.</small></p>_
+_<p><small>Poster image names must match the structure below</small></p>_
 
        BepInEx/
         ├── plugins/
@@ -42,7 +42,7 @@ _<p><small>Poster image names must match the structure below.</small></p>_
         └── ...
 
 **Mutliple Pack Folder Structure**:
-_<p><small>Poster image names must match the structure below.</small></p>_
+_<p><small>Poster image names must match the structure below</small></p>_
 
        BepInEx/
         ├── plugins/
@@ -74,36 +74,36 @@ _<p><small>Poster image names must match the structure below.</small></p>_
 ## Configuration Options
 
 - **Enable Networking**:
-  - If true (default), posters are synced with all players. If false, the mod is client-side only, allowing to play vanilla lobby.
+  - If true (default), posters are synced with all players. If false, the mod is client-side only, allowing to play vanilla lobby
 - **Randomier mode**:
-  - _PerPack (default)_: Selects one pack randomly for all posters.
-  - _PerPoster_: Randomizes textures for each poster from all enabled packs.
+  - _PerPack (default)_: Selects one pack randomly for all posters
+  - _PerPoster_: Randomizes textures for each poster from all enabled packs
 - **Keep Pack For**:
-  - _Lobby (default)_: Randomized posters only when the lobby reloads.
-  - _Session_: Randomized posters only when restarting the game.
-  - _SaveSlot_: Randomized posters only when creating a new save slot.
+  - _Lobby (default)_: Randomized posters only when the lobby reloads
+  - _Session_: Randomized posters only when restarting the game
+  - _SaveSlot_: Randomized posters only when creating a new save slot
 - **Vanilla model**:
-  - _Both (default)_: Uses both _Poster5_ and _Tips_ vanilla meshes.
-  - _Poster5_: Uses only _Poster5_ vanilla mesh.
-  - _Tips_: Uses only _Tips_ vanilla mesh.
-  - _None_: Uses none of the vanilla meshes and uses quads.
+  - _Both (default)_: Uses both _Poster5_ and _Tips_ vanilla meshes
+  - _Poster5_: Uses only _Poster5_ vanilla mesh
+  - _Tips_: Uses only _Tips_ vanilla mesh
+  - _None_: Uses none of the vanilla meshes and uses quads
 - **Toggle Packs and Posters**:
-  - Each poster pack has an `Enabled` setting for poster pack and posters. Set to `false` to disable a pack or a poster.
+  - Each poster pack has an `Enabled` setting for poster pack and posters. Set to `false` to disable a pack or a poster
 - **Global Chance**:
-  - Assign a `Global Chance` value (0–100) for each pack. If any pack has a `Global Chance > 0`, weighted random selection is used.
-  - A `Chance = 0` excludes the pack from selection, reverting to equal probability among enabled packs with non-zero chances.
+  - Assign a `Global Chance` value (0–100) for each pack. If any pack has a `Global Chance > 0`, weighted random selection is used
+  - A `Chance = 0` excludes the pack from selection, reverting to equal probability among enabled packs with non-zero chances
 - **Per-Poster Chance**:
-  - For each poster in a pack, set a probability (0–100). If any poster has a `Chance > 0`, weighted selection applies.
-  - Having 2 and more poster packs and one of the poster pack has (e.g. Poster2) `Chance = 70` and second poster pack with same poster has `Chance = 0` means that second poster pack poster is excluded from selection within that pack.
+  - For each poster in a pack, set a probability (0–100). If any poster has a `Chance > 0`, weighted selection applies
+  - Having 2 and more poster packs and one of the poster pack has (e.g. Poster2) `Chance = 70` and second poster pack with same poster has `Chance = 0` means that second poster pack poster is excluded from selection within that pack
 - **Volume**:
-  - Configure volume of `.mp4` posters.
+  - Configure volume of `.mp4` posters
 - **Max distance**:
-  - Configure maximum audio distance of `.mp4` posters.
+  - Configure maximum audio distance of `.mp4` posters
 - **Aspect ratio**:
-  - Choose aspect ratio of `.mp4` posters _[ Stretch 'X', FitInside, FitOutside, NoScaling ]_.
+  - Choose aspect ratio of `.mp4` posters _[ Stretch 'X', FitInside, FitOutside, NoScaling ]_
 - **TextureCaching**:
-  - _Enabled_: Stores textures in memory for faster access, reducing disk reads.
-  - _Disabled (Default)_: Loads textures from disk each time, which may slightly increase load times (based on image size).
+  - _Enabled_: Stores textures in memory for faster access, reducing disk reads
+  - _Disabled (Default)_: Loads textures from disk each time, which may slightly increase load times (based on image size)
 
 ---
 
@@ -154,8 +154,8 @@ In PerPoster mode, the mod will just pick another working poster from the availa
 
 ## Credits
 
-- Developed by **[seeya](https://thunderstore.io/c/lethal-company/p/seechela/)**.
-- Was inspired by LethalPosters mod.
+- Developed by **[seeya](https://thunderstore.io/c/lethal-company/p/seechela/)**
+- Was inspired by LethalPosters
 
 ---
 

@@ -212,7 +212,7 @@ namespace CustomPosters
             foreach (var poster in CreatedPosters)
             {
                 if (poster == null) continue;
-        
+
                 var renderer = poster.GetComponent<PosterRenderer>();
                 if (renderer != null) UnityEngine.Object.Destroy(renderer);
                 UnityEngine.Object.Destroy(poster);
@@ -223,21 +223,21 @@ namespace CustomPosters
         private static GameObject? CreatePoster(string posterName)
         {
             GameObject? prefab = null;
-            
+
             switch (posterName)
             {
                 case Constants.PosterNameCustomTips:
-                    prefab = Plugin.ModConfig.UseTipsVanillaModel 
-                        ? AssetManager.TipsPrefab 
+                    prefab = Plugin.ModConfig.UseTipsVanillaModel
+                        ? AssetManager.TipsPrefab
                         : AssetManager.PosterPrefab;
                     break;
-                    
+
                 case Constants.PosterNamePoster5:
                     prefab = Plugin.ModConfig.UsePoster5VanillaModel
-                        ? AssetManager.Poster5Prefab 
+                        ? AssetManager.Poster5Prefab
                         : AssetManager.PosterPrefab;
                     break;
-                    
+
                 default:
                     prefab = AssetManager.PosterPrefab;
                     break;
@@ -247,7 +247,7 @@ namespace CustomPosters
             {
                 Plugin.Log.LogError($"Failed to find prefab for {posterName}. Falling back to default poster prefab.");
                 prefab = AssetManager.PosterPrefab;
-                
+
                 if (prefab == null)
                 {
                     Plugin.Log.LogError("Default poster prefab is also null!");
@@ -269,7 +269,7 @@ namespace CustomPosters
             var posterObject = CreatedPosters.FirstOrDefault(p => p.name == posterName);
             posterObject?.GetComponent<PosterRenderer>()?.SetVideoTime(time);
         }
-        
+
         private static IEnumerator CreateCustomPostersAsync()
         {
             CleanUpPosters();
@@ -285,11 +285,11 @@ namespace CustomPosters
             postersParent.transform.localPosition = Vector3.zero;
 
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-            
+
             var posterData = PosterLayoutProvider.GetLayout();
 
             var enabledPacks = Plugin.Service.PosterFolders.Where(folder => Plugin.ModConfig.IsPackEnabled(folder)).ToList();
-            
+
             bool usingForcedHostPack = Plugin.ModConfig.EnableNetworking.Value && !ShouldActAsHost && !string.IsNullOrEmpty(_selectedPack);
             if (enabledPacks.Count == 0 && !usingForcedHostPack)
             {
@@ -467,27 +467,39 @@ namespace CustomPosters
                 }
             }
 
-            var prioritizedContent = new Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)>();       
-            // prioritize textures
-            foreach (var kvp in allTextures)
-            {
-                var selected = PackSelector.SelectContentByChance(
-                    kvp.Value,
-                    t => Plugin.ModConfig.GetFileChance(t.filePath),
-                    t => Plugin.Service.GetFilePriority(t.filePath)
-                );
-                prioritizedContent[kvp.Key] = (selected.texture, selected.filePath, false);
-            }
+            var prioritizedContent = new Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)>();
 
-            // prioritize videos
-            foreach (var kvp in allVideos)
+            var allPosterNames = allTextures.Keys.Union(allVideos.Keys).ToHashSet();
+
+            foreach (var posterName in allPosterNames)
             {
-                var selected = PackSelector.SelectContentByChance(
-                    kvp.Value,
-                    v => Plugin.ModConfig.GetFileChance(v),
-                    v => Plugin.Service.GetFilePriority(v)
-                );
-                prioritizedContent[kvp.Key] = (null, selected, true);
+                var combinedContent = new List<(Texture2D? texture, string filePath, bool isVideo)>();
+
+                if (allTextures.TryGetValue(posterName, out var textures))
+                {
+                    foreach (var tex in textures)
+                    {
+                        combinedContent.Add((tex.texture, tex.filePath, false));
+                    }
+                }
+
+                if (allVideos.TryGetValue(posterName, out var videos))
+                {
+                    foreach (var video in videos)
+                    {
+                        combinedContent.Add((null, video, true));
+                    }
+                }
+
+                if (combinedContent.Count > 0)
+                {
+                    var selected = PackSelector.SelectContentByChance(
+                        combinedContent,
+                        item => Plugin.ModConfig.GetFileChance(item.filePath),
+                        item => Plugin.Service.GetFilePriority(item.filePath)
+                    );
+                    prioritizedContent[posterName] = selected;
+                }
             }
 
             if (allTextures.Count == 0 && allVideos.Count == 0)
@@ -509,7 +521,7 @@ namespace CustomPosters
                 {
                     continue;
                 }
-                
+
                 poster.name = posterData[i].Name;
                 poster.transform.SetParent(postersParent.transform);
                 poster.transform.position = posterData[i].Position;
@@ -519,11 +531,11 @@ namespace CustomPosters
                 var posterKey = posterData[i].Name.ToLower();
                 if (prioritizedContent.TryGetValue(posterKey, out var content) && Plugin.ModConfig.IsFileEnabled(content.filePath))
                 {
-                var renderer = poster.AddComponent<PosterRenderer>();
-                var (texture, filePath, isVideo) = content;
-                var posterMeshRenderer = poster.GetComponent<MeshRenderer>();
+                    var renderer = poster.AddComponent<PosterRenderer>();
+                    var (texture, filePath, isVideo) = content;
+                    var posterMeshRenderer = poster.GetComponent<MeshRenderer>();
 
-                renderer.Initialize(texture, isVideo ? filePath : null, posterMeshRenderer?.material);
+                    renderer.Initialize(texture, isVideo ? filePath : null, posterMeshRenderer?.material);
 
                     CreatedPosters.Add(poster);
                     anyPosterLoaded = true;

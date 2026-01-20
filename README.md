@@ -1,6 +1,6 @@
 ---
 # CustomPosters
-### **A mod for Lethal Company that replaces the vanilla posters in the ship with custom posters added by user.**
+### **A mod for Lethal Company that replaces the vanilla posters in the ship with custom posters added by user**
 
 ---
 
@@ -14,40 +14,40 @@
 6. [Troubleshooting](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#troubleshooting)
 7. [License](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#license)
 8. [Credits](https://github.com/se3ya/CustomPosters?tab=readme-ov-file#credits)
-   
+
 ---
 
 ## Quick Start
 
-1. Download and install [GaleModManager](https://thunderstore.io/c/lethal-company/p/Kesomannen/GaleModManager/).
-2. Download the latest version of **CustomPosters** from [Thunderstore](https://thunderstore.io/c/lethal-company/p/seechela/CustomPosters/) or github [Releases](https://github.com/se3ya/CustomPosters/releases).
-3. Add your images to the `posters` and `tips` folders as described in the [Adding Custom Posters](#adding-custom-posterscreating-custom-posters-mod).
-4. Configure poster packs in the `CustomPosters.cfg` as you want.
+1. Download and install [GaleModManager](https://thunderstore.io/c/lethal-company/p/Kesomannen/GaleModManager/)
+2. Download the latest version of **CustomPosters** from [Thunderstore](https://thunderstore.io/c/lethal-company/p/seechela/CustomPosters/) or github [Releases](https://github.com/se3ya/CustomPosters/releases)
+3. Add your images to the `posters` and `tips` folders as described in the [Adding Custom Posters](#adding-custom-posterscreating-custom-posters-mod)
+4. Configure poster packs in the `CustomPosters.cfg` as you want
 
 ---
 
 ## Features
-- Overrides the vanilla posters in the ship with your own images.
-- Supports multiple poster pack mods at once.
-- Supports multiple poster packs in a single mod.
-- Supports most of the image formats and `.mp4` video format.
-- Ability to enable/disable packs and posters, change chances of the packs and posters, toggleable networking, change volume, max distance and aspect ratio of `.mp4` posters via config file.
-- Compatible with **ShipWindows**, **2 sToRy ShIp**, **BiggerShip**, and **WiderShipMod**.
-- Posters and video playback is synchronized with clients.
-- [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**.
+- Overrides the vanilla posters in the ship with your own images
+- Supports multiple poster pack mods at once
+- Supports multiple poster packs in a single mod
+- Supports most of the image formats and `.mp4` video format
+- Ability to enable/disable packs and posters, change chances of the packs and posters, toggleable networking, change volume, max distance and aspect ratio of `.mp4` posters via config file
+- Compatible with **ShipWindows**, **2 sToRy ShIp**, **BiggerShip**, and **WiderShipMod**
+- Posters and video playback is synchronized with clients
+- [**PosterCropperTool**](https://github.com/se3ya/PosterCropperTool) allows to crop posters that are made for **LethalPosters** so they can be compatible with **CustomPosters**
   - *Sizes of the posters will be slightly incorrect after cropping!*
 
 ---
 
 ## Adding Custom Posters
 ### Supported formats
-- `.png`, `.jpg`, `.jpeg`, `.bmp`, `.mp4`.
+- `.png`, `.jpg`, `.jpeg`, `.bmp`, `.mp4`
 ### Steps
-1. Create a folder structure for your custom poster pack in the `BepInEx/plugins` directory as shown below.
-2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly - *`Poster1.png`, `Poster2.mp4`, `Poster3.bmp`, `Poster4.jpeg`, `Poster5.png`* and *`CustomTips.jpg`*.
+1. Create a folder structure for your custom poster pack in the `BepInEx/plugins` directory as shown below
+2. Place your poster images in the `posters` and `tips` folders, ensuring filenames match exactly - *`Poster1.png`, `Poster2.mp4`, `Poster3.bmp`, `Poster4.jpeg`, `Poster5.png`* and *`CustomTips.jpg`*
 
 **Single Pack Folder Structure**:
-_<p><small>Poster image names must match the structure below.</small></p>_
+_<p><small>Poster image names must match the structure below</small></p>_
 
 
        BepInEx/
@@ -58,13 +58,13 @@ _<p><small>Poster image names must match the structure below.</small></p>_
         │                │    └── Poster1.png, Poster2.png, Poster3.png, Poster4.png, Poster5.png
         │                └── tips/
         │                     └── CustomTips.png
-        └── ...                  
+        └── ...
 
 
 **Mutliple Pack Folder Structure**:
-_<p><small>Poster image names must match the structure below.</small></p>_
+_<p><small>Poster image names must match the structure below</small></p>_
 
-   
+
        BepInEx/
         ├── plugins/
         │   └──── YourPosterModName/
@@ -79,7 +79,7 @@ _<p><small>Poster image names must match the structure below.</small></p>_
         │                │    └── Poster1.png, Poster2.png, Poster3.png, Poster4.png, Poster5.png
         │                └── tips/
         │                     └── CustomTips.png
-        └── ...                  
+        └── ...
 
 ### Recommended Poster Sizes *[ In pixels ]*
 - Poster1 - 639 Width, 488 Height
@@ -92,36 +92,36 @@ _<p><small>Poster image names must match the structure below.</small></p>_
 
 ## Configuration Options
 - **Enable Networking**:
-  - If true (default), posters are synced with all players. If false, the mod is client-side only, allowing to play vanilla lobby.
+  - If true (default), posters are synced with all players. If false, the mod is client-side only, allowing to play vanilla lobby
 - **Randomier mode**:
-  - *PerPack (default)*: Selects one pack randomly for all posters.
-  - *PerPoster*: Randomizes textures for each poster from all enabled packs.
+  - *PerPack (default)*: Selects one pack randomly for all posters
+  - *PerPoster*: Randomizes textures for each poster from all enabled packs
 - **Keep Pack For**:
-  - *Lobby (default)*: Randomized posters only when the lobby reloads.
-  - *Session*: Randomized posters only when restarting the game.
-  - *SaveSlot*: Randomized posters only when creating a new save slot.
+  - *Lobby (default)*: Randomized posters only when the lobby reloads
+  - *Session*: Randomized posters only when restarting the game
+  - *SaveSlot*: Randomized posters only when creating a new save slot
 - **Vanilla model**:
-  - *Both (default)*: Uses both *Poster5* and *Tips* vanilla meshes.
-  - *Poster5*: Uses only *Poster5* vanilla mesh.
-  - *Tips*: Uses only *Tips* vanilla mesh.
-  - *None*: Uses none of the vanilla meshes and uses quads.
+  - *Both (default)*: Uses both *Poster5* and *Tips* vanilla meshes
+  - *Poster5*: Uses only *Poster5* vanilla mesh
+  - *Tips*: Uses only *Tips* vanilla mesh
+  - *None*: Uses none of the vanilla meshes and uses quads
 - **Toggle Packs and Posters**:
-  - Each poster pack has an `Enabled` setting for poster pack and posters. Set to `false` to disable a pack or a poster.
+  - Each poster pack has an `Enabled` setting for poster pack and posters. Set to `false` to disable a pack or a poster
 - **Global Chance**:
-  - Assign a `Global Chance` value (0–100) for each pack. If any pack has a `Global Chance > 0`, weighted random selection is used.
-  - A `Chance = 0` excludes the pack from selection, reverting to equal probability among enabled packs with non-zero chances.
+  - Assign a `Global Chance` value (0–100) for each pack. If any pack has a `Global Chance > 0`, weighted random selection is used
+  - A `Chance = 0` excludes the pack from selection, reverting to equal probability among enabled packs with non-zero chances
 - **Per-Poster Chance**:
-  - For each poster in a pack, set a probability (0–100). If any poster has a `Chance > 0`, weighted selection applies.
-  - Having 2 and more poster packs and one of the poster pack has (e.g. Poster2) `Chance = 70` and second poster pack with same poster has `Chance = 0` means that second poster pack poster is excluded from selection within that pack.
+  - For each poster in a pack, set a probability (0–100). If any poster has a `Chance > 0`, weighted selection applies
+  - Having 2 and more poster packs and one of the poster pack has (e.g. Poster2) `Chance = 70` and second poster pack with same poster has `Chance = 0` means that second poster pack poster is excluded from selection within that pack
 - **Volume**:
-  - Configure volume of `.mp4` posters.
+  - Configure volume of `.mp4` posters
 - **Max distance**:
-  - Configure maximum audio distance of `.mp4` posters.
+  - Configure maximum audio distance of `.mp4` posters
 - **Aspect ratio**:
-  - Choose aspect ratio of `.mp4` posters *[ Stretch 'X', FitInside, FitOutside, NoScaling ]*.
+  - Choose aspect ratio of `.mp4` posters *[ Stretch 'X', FitInside, FitOutside, NoScaling ]*
 - **TextureCaching**:
-  - *Enabled*: Stores textures in memory for faster access, reducing disk reads.
-  - *Disabled (Default)*: Loads textures from disk each time, which may slightly increase load times (based on image size).
+  - *Enabled*: Stores textures in memory for faster access, reducing disk reads
+  - *Disabled (Default)*: Loads textures from disk each time, which may slightly increase load times (based on image size)
 
 ---
 
@@ -151,15 +151,15 @@ In PerPoster mode, the mod will just pick another working poster from the availa
 ### Default Poster (Plane.001) is Still Visible
 - This happens if the mod fails to load any custom poster pack. Check the config and make sure you have at least 1 poster pack enabled.
 
-### Why can't I join vanilla lobbies? 
+### Why can't I join vanilla lobbies?
 - Mod uses networking that conflicts with vanilla lobbies. To join vanilla lobbies, disable the "Enable Networking" option in the configs.
 
 ---
 
 ## Credits
 
-- Developed by **[seeya](https://thunderstore.io/c/lethal-company/p/seechela/)**.
-- Was inspired by LethalPosters mod.
+- Developed by **[seeya](https://thunderstore.io/c/lethal-company/p/seechela/)**
+- Was inspired by LethalPosters
 
 ---
 

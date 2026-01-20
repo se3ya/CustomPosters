@@ -1,7 +1,6 @@
 using BepInEx;
 using BepInEx.Logging;
 using CustomPosters.Patches;
-using CustomPosters.Networking;
 using HarmonyLib;
 
 namespace CustomPosters
