@@ -120,7 +120,7 @@ namespace CustomPosters
                 case PosterConfig.KeepFor.SaveSlot:
                     string? saveIdForSeed = null;
                     try { saveIdForSeed = Utils.SavePersistenceManager.TryGetCurrentSaveId(); }
-                    catch { }
+                    catch (Exception) { /* save id not available */ }
                     var seed = !string.IsNullOrEmpty(saveIdForSeed)
                         ? Utils.HashUtils.DeterministicHash(saveIdForSeed!)
                         : Environment.TickCount;
@@ -285,233 +285,287 @@ namespace CustomPosters
             postersParent.transform.localPosition = Vector3.zero;
 
             var posterPlane = GameObject.Find("Environment/HangarShip/Plane.001");
-
             var posterData = PosterLayoutProvider.GetLayout();
 
-            var enabledPacks = Plugin.Service.PosterFolders.Where(folder => Plugin.ModConfig.IsPackEnabled(folder)).ToList();
-
-            bool usingForcedHostPack = Plugin.ModConfig.EnableNetworking.Value && !ShouldActAsHost && !string.IsNullOrEmpty(_selectedPack);
-            if (enabledPacks.Count == 0 && !usingForcedHostPack)
+            if (!TryResolvePacksToUse(posterPlane, out var packsToUse))
             {
-                Plugin.Log.LogWarning("No enabled packs found");
-                if (posterPlane != null)
-                {
-                    posterPlane.SetActive(true);
-                }
                 yield break;
-            }
-
-            var enabledPackNames = enabledPacks.Select(pack => Path.GetFileName(pack)).ToList();
-
-            List<string> packsToUse;
-            if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
-            {
-                bool shouldSelectPack = ShouldActAsHost;
-
-                if (shouldSelectPack)
-                {
-                    var mode = Plugin.ModConfig.KeepPackFor.Value;
-                    if (mode == PosterConfig.KeepFor.SaveSlot)
-                    {
-                        var curId = Utils.SavePersistenceManager.TryGetCurrentSaveId();
-                        if (string.IsNullOrEmpty(curId))
-                        {
-                            _selectedPack = null;
-                        }
-                    }
-                    bool needNewSelection = mode switch
-                    {
-                        PosterConfig.KeepFor.Lobby => true,
-                        PosterConfig.KeepFor.Session => _selectedPack == null || !enabledPacks.Contains(_selectedPack),
-                        PosterConfig.KeepFor.SaveSlot => _selectedPack == null || !enabledPacks.Contains(_selectedPack),
-                        _ => true
-                    };
-
-                    if (needNewSelection)
-                    {
-                        var candidatePacks = new List<string>(enabledPacks);
-                        string? chosen = null;
-
-                        while (candidatePacks.Count > 0)
-                        {
-                            var candidate = PackSelector.SelectPackByChance(candidatePacks);
-                            if (PackHasValidFiles(candidate))
-                            {
-                                chosen = candidate;
-                                break;
-                            }
-                            candidatePacks.Remove(candidate);
-                        }
-
-                        _selectedPack = chosen;
-
-                        if (!string.IsNullOrEmpty(_selectedPack) && mode == PosterConfig.KeepFor.SaveSlot)
-                        {
-                            try
-                            {
-                                var saveId = Utils.SavePersistenceManager.TryGetCurrentSaveId();
-                                if (!string.IsNullOrEmpty(saveId))
-                                {
-                                    Utils.SavePersistenceManager.SaveSelectedPack(saveId!, _selectedPack!);
-                                    Plugin.Log.LogInfo($"Saved selected pack for save '{saveId}'");
-                                }
-                                else
-                                {
-                                    Plugin.Log.LogDebug("PerSave: No valid saveId yet; not persisting selection.");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Plugin.Log.LogDebug($"SaveSlot save skipped: {ex.Message}");
-                            }
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(_selectedPack) && Plugin.ModConfig.EnableNetworking.Value)
-                    {
-                        PosterSyncManager.SendPacket(_selectedPack!);
-                    }
-                }
-
-                if (string.IsNullOrEmpty(_selectedPack))
-                {
-                    Plugin.Log.LogInfo(Plugin.ModConfig.EnableNetworking.Value ? "Client is waiting for host to select a pack..." : "No valid pack found, falling back to vanilla posters");
-                    if (posterPlane != null)
-                    {
-                        posterPlane.SetActive(true);
-                    }
-                    yield break;
-                }
-
-                var shortPackName = PathUtils.GetDisplayPackName(_selectedPack);
-                Plugin.Log.LogInfo($"Using pack: {shortPackName}");
-                packsToUse = new List<string> { _selectedPack };
-            }
-            else
-            {
-                packsToUse = enabledPacks;
-                Plugin.Log.LogInfo("PerPoster mode enabled.");
             }
 
             var allTextures = new Dictionary<string, List<(Texture2D texture, string filePath)>>();
             var allVideos = new Dictionary<string, List<string>>();
+            yield return LoadContentFromPacks(packsToUse, allTextures, allVideos);
+
+            if (allTextures.Count == 0 && allVideos.Count == 0)
+            {
+                Plugin.Log.LogWarning("No textures found in enabled packs");
+                if (posterPlane != null) posterPlane.SetActive(true);
+                yield break;
+            }
+
+            var prioritizedContent = BuildPrioritizedContent(allTextures, allVideos);
+
+            bool anyPosterLoaded = false;
+            yield return SpawnPostersFromLayout(
+                posterData,
+                postersParent,
+                prioritizedContent,
+                loaded => anyPosterLoaded = loaded);
+
+            FinalizeRender(anyPosterLoaded, hangarShip, posterPlane);
+        }
+
+        private static bool TryResolvePacksToUse(GameObject? posterPlane, out List<string> packsToUse)
+        {
+            packsToUse = new List<string>();
+
+            var enabledPacks = Plugin.Service.PosterFolders
+                .Where(folder => Plugin.ModConfig.IsPackEnabled(folder))
+                .ToList();
+
+            bool usingForcedHostPack = Plugin.ModConfig.EnableNetworking.Value
+                && !ShouldActAsHost
+                && !string.IsNullOrEmpty(_selectedPack);
+
+            if (enabledPacks.Count == 0 && !usingForcedHostPack)
+            {
+                Plugin.Log.LogWarning("No enabled packs found");
+                if (posterPlane != null) posterPlane.SetActive(true);
+                return false;
+            }
+
+            if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
+            {
+                return TryResolvePerPackSelection(enabledPacks, posterPlane, out packsToUse);
+            }
+
+            Plugin.Log.LogInfo("PerPoster mode enabled.");
+            packsToUse = enabledPacks;
+            return true;
+        }
+
+        private static bool TryResolvePerPackSelection(
+            List<string> enabledPacks,
+            GameObject? posterPlane,
+            out List<string> packsToUse)
+        {
+            packsToUse = new List<string>();
+
+            if (ShouldActAsHost)
+            {
+                SelectHostPack(enabledPacks);
+                BroadcastSelectedPackIfNeeded();
+            }
+
+            if (string.IsNullOrEmpty(_selectedPack))
+            {
+                Plugin.Log.LogInfo(Plugin.ModConfig.EnableNetworking.Value
+                    ? "Client is waiting for host to select a pack..."
+                    : "No valid pack found, falling back to vanilla posters");
+                if (posterPlane != null) posterPlane.SetActive(true);
+                return false;
+            }
+
+            Plugin.Log.LogInfo($"Using pack: {PathUtils.GetDisplayPackName(_selectedPack)}");
+            packsToUse = new List<string> { _selectedPack! };
+            return true;
+        }
+
+        private static void SelectHostPack(List<string> enabledPacks)
+        {
+            var mode = Plugin.ModConfig.KeepPackFor.Value;
+
+            if (mode == PosterConfig.KeepFor.SaveSlot
+                && string.IsNullOrEmpty(Utils.SavePersistenceManager.TryGetCurrentSaveId()))
+            {
+                _selectedPack = null;
+            }
+
+            bool needNewSelection = mode switch
+            {
+                PosterConfig.KeepFor.Lobby => true,
+                PosterConfig.KeepFor.Session => _selectedPack == null || !enabledPacks.Contains(_selectedPack),
+                PosterConfig.KeepFor.SaveSlot => _selectedPack == null || !enabledPacks.Contains(_selectedPack),
+                _ => true
+            };
+
+            if (!needNewSelection) return;
+
+            _selectedPack = PickFirstValidPack(enabledPacks);
+
+            if (!string.IsNullOrEmpty(_selectedPack) && mode == PosterConfig.KeepFor.SaveSlot)
+            {
+                PersistSelectionForSaveSlot(_selectedPack!);
+            }
+        }
+
+        private static string? PickFirstValidPack(List<string> candidates)
+        {
+            var pool = new List<string>(candidates);
+            while (pool.Count > 0)
+            {
+                var candidate = PackSelector.SelectPackByChance(pool);
+                if (PackHasValidFiles(candidate)) return candidate;
+                pool.Remove(candidate);
+            }
+            return null;
+        }
+
+        private static void PersistSelectionForSaveSlot(string selectedPack)
+        {
+            try
+            {
+                var saveId = Utils.SavePersistenceManager.TryGetCurrentSaveId();
+                if (!string.IsNullOrEmpty(saveId))
+                {
+                    Utils.SavePersistenceManager.SaveSelectedPack(saveId!, selectedPack);
+                    Plugin.Log.LogInfo($"Saved selected pack for save '{saveId}'");
+                }
+                else
+                {
+                    Plugin.Log.LogDebug("PerSave: No valid saveId yet; not persisting selection.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogDebug($"SaveSlot save skipped: {ex.Message}");
+            }
+        }
+
+        private static void BroadcastSelectedPackIfNeeded()
+        {
+            if (!string.IsNullOrEmpty(_selectedPack) && Plugin.ModConfig.EnableNetworking.Value)
+            {
+                PosterSyncManager.SendPacket(_selectedPack!);
+            }
+        }
+
+        private static IEnumerator LoadContentFromPacks(
+            List<string> packsToUse,
+            Dictionary<string, List<(Texture2D texture, string filePath)>> allTextures,
+            Dictionary<string, List<string>> allVideos)
+        {
+            const int batchSize = 5;
+
             foreach (var pack in packsToUse)
             {
-                string packName = Path.GetFileName(pack);
-                string postersPath = Path.Combine(pack, "posters");
-                string tipsPath = Path.Combine(pack, "tips");
-                string nestedPostersPath = Path.Combine(pack, "CustomPosters", "posters");
-                string nestedTipsPath = Path.Combine(pack, "CustomPosters", "tips");
+                var filesToLoad = GatherValidFilesForPack(pack);
 
-                var filesToLoad = new List<string>();
-                var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
-
-                var pathsToCheck = new[] { postersPath, tipsPath, nestedPostersPath, nestedTipsPath }
-                    .Where(p => Directory.Exists(p))
-                    .Select(p => Path.GetFullPath(p).Replace('\\', '/'))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-
-                foreach (var path in pathsToCheck)
-                {
-                    var files = Directory.GetFiles(path)
-                        .Where(f => validExtensions.Contains(Path.GetExtension(f).ToLower()) && Plugin.ModConfig.IsFileEnabled(f))
-                        .Select(f => Path.GetFullPath(f).Replace('\\', '/'))
-                        .ToList();
-
-                    filesToLoad.AddRange(files);
-                }
-
-                filesToLoad = filesToLoad.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
-                const int batchSize = 5;
                 for (int i = 0; i < filesToLoad.Count; i += batchSize)
                 {
                     var batch = filesToLoad.Skip(i).Take(batchSize).ToList();
                     foreach (var file in batch)
                     {
-                        if (Path.GetExtension(file).ToLower() == ".mp4")
+                        if (file.IsVideo())
                         {
-                            var posterName = Path.GetFileNameWithoutExtension(file).ToLower();
-                            if (!allVideos.ContainsKey(posterName))
-                            {
-                                allVideos[posterName] = new List<string>();
-                            }
-                            allVideos[posterName].Add(file);
-                            Plugin.Service.CacheVideo(file);
+                            RegisterVideo(file, allVideos);
                         }
                         else
                         {
-                            (Texture2D? texture, string? filePath) textureResult = (null, null);
-
-                            var loadTask = LoadTextureAsync(file, result => textureResult = result);
-
-                            yield return new WaitUntil(() => loadTask.IsCompleted);
-
-                            if (textureResult.texture != null && textureResult.filePath != null)
-                            {
-                                var posterName = Path.GetFileNameWithoutExtension(textureResult.filePath).ToLower();
-                                if (!allTextures.ContainsKey(posterName))
-                                {
-                                    allTextures[posterName] = new List<(Texture2D, string)>();
-                                }
-                                allTextures[posterName].Add((textureResult.texture, textureResult.filePath));
-                            }
-                            else
-                            {
-                                Plugin.Log.LogWarning($"Failed to load texture from {file}");
-                            }
+                            yield return LoadTextureToDictionary(file, allTextures);
                         }
                     }
                     yield return null;
                 }
             }
+        }
 
-            var prioritizedContent = new Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)>();
-
-            var allPosterNames = allTextures.Keys.Union(allVideos.Keys).ToHashSet();
-
-            foreach (var posterName in allPosterNames)
+        private static List<string> GatherValidFilesForPack(string pack)
+        {
+            var candidatePaths = new[]
             {
-                var combinedContent = new List<(Texture2D? texture, string filePath, bool isVideo)>();
+                Path.Combine(pack, "posters"),
+                Path.Combine(pack, "tips"),
+                Path.Combine(pack, "CustomPosters", "posters"),
+                Path.Combine(pack, "CustomPosters", "tips")
+            };
 
-                if (allTextures.TryGetValue(posterName, out var textures))
-                {
-                    foreach (var tex in textures)
-                    {
-                        combinedContent.Add((tex.texture, tex.filePath, false));
-                    }
-                }
+            var pathsToCheck = candidatePaths
+                .Where(Directory.Exists)
+                .Select(p => Path.GetFullPath(p).NormalizePath())
+                .Distinct(StringComparer.OrdinalIgnoreCase);
 
-                if (allVideos.TryGetValue(posterName, out var videos))
-                {
-                    foreach (var video in videos)
-                    {
-                        combinedContent.Add((null, video, true));
-                    }
-                }
-
-                if (combinedContent.Count > 0)
-                {
-                    var selected = PackSelector.SelectContentByChance(
-                        combinedContent,
-                        item => Plugin.ModConfig.GetFileChance(item.filePath),
-                        item => Plugin.Service.GetFilePriority(item.filePath)
-                    );
-                    prioritizedContent[posterName] = selected;
-                }
+            var results = new List<string>();
+            foreach (var path in pathsToCheck)
+            {
+                results.AddRange(Directory.GetFiles(path)
+                    .Where(f => f.IsValidPosterFile() && Plugin.ModConfig.IsFileEnabled(f))
+                    .Select(f => Path.GetFullPath(f).NormalizePath()));
             }
 
-            if (allTextures.Count == 0 && allVideos.Count == 0)
+            return results.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        private static void RegisterVideo(string file, Dictionary<string, List<string>> allVideos)
+        {
+            var posterName = file.GetPosterName();
+            if (!allVideos.ContainsKey(posterName))
             {
-                Plugin.Log.LogWarning("No textures found in enabled packs");
-                if (posterPlane != null)
-                {
-                    posterPlane.SetActive(true);
-                }
+                allVideos[posterName] = new List<string>();
+            }
+            allVideos[posterName].Add(file);
+            Plugin.Service.CacheVideo(file);
+        }
+
+        private static IEnumerator LoadTextureToDictionary(
+            string file,
+            Dictionary<string, List<(Texture2D texture, string filePath)>> allTextures)
+        {
+            (Texture2D? texture, string? filePath) result = (null, null);
+            var loadTask = LoadTextureAsync(file, r => result = r);
+            yield return new WaitUntil(() => loadTask.IsCompleted);
+
+            if (result.texture == null || result.filePath == null)
+            {
+                Plugin.Log.LogWarning($"Failed to load texture from {file}");
                 yield break;
             }
 
+            var posterName = result.filePath.GetPosterName();
+            if (!allTextures.ContainsKey(posterName))
+            {
+                allTextures[posterName] = new List<(Texture2D, string)>();
+            }
+            allTextures[posterName].Add((result.texture, result.filePath));
+        }
+
+        private static Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)> BuildPrioritizedContent(
+            Dictionary<string, List<(Texture2D texture, string filePath)>> allTextures,
+            Dictionary<string, List<string>> allVideos)
+        {
+            var prioritized = new Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)>();
+            var allPosterNames = allTextures.Keys.Union(allVideos.Keys);
+
+            foreach (var posterName in allPosterNames)
+            {
+                var combined = new List<(Texture2D? texture, string filePath, bool isVideo)>();
+
+                if (allTextures.TryGetValue(posterName, out var textures))
+                {
+                    combined.AddRange(textures.Select(t => ((Texture2D?)t.texture, t.filePath, false)));
+                }
+                if (allVideos.TryGetValue(posterName, out var videos))
+                {
+                    combined.AddRange(videos.Select(v => ((Texture2D?)null, v, true)));
+                }
+
+                if (combined.Count == 0) continue;
+
+                prioritized[posterName] = PackSelector.SelectContentByChance(
+                    combined,
+                    item => Plugin.ModConfig.GetFileChance(item.filePath),
+                    item => Plugin.Service.GetFilePriority(item.filePath));
+            }
+
+            return prioritized;
+        }
+
+        private static IEnumerator SpawnPostersFromLayout(
+            PosterData[] posterData,
+            GameObject postersParent,
+            Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)> prioritizedContent,
+            Action<bool> onCompleted)
+        {
             bool anyPosterLoaded = false;
 
             for (int i = 0; i < posterData.Length; i++)
@@ -522,52 +576,65 @@ namespace CustomPosters
                     continue;
                 }
 
-                poster.name = posterData[i].Name;
-                poster.transform.SetParent(postersParent.transform);
-                poster.transform.position = posterData[i].Position;
-                poster.transform.rotation = Quaternion.Euler(posterData[i].Rotation);
-                poster.transform.localScale = posterData[i].Scale;
+                ApplyPosterTransform(poster, posterData[i], postersParent.transform);
 
-                var posterKey = posterData[i].Name.ToLower();
-                if (prioritizedContent.TryGetValue(posterKey, out var content) && Plugin.ModConfig.IsFileEnabled(content.filePath))
+                if (TryAssignPosterContent(poster, posterData[i].Name, prioritizedContent))
                 {
-                    var renderer = poster.AddComponent<PosterRenderer>();
-                    var (texture, filePath, isVideo) = content;
-                    var posterMeshRenderer = poster.GetComponent<MeshRenderer>();
-
-                    renderer.Initialize(texture, isVideo ? filePath : null, posterMeshRenderer?.material);
-
-                    CreatedPosters.Add(poster);
                     anyPosterLoaded = true;
                 }
-                else
-                {
-                    Plugin.Log.LogWarning($"No enabled texture found for {posterData[i].Name}. Destroying the poster");
-                    UnityEngine.Object.Destroy(poster);
-                }
+
                 yield return null;
             }
 
+            onCompleted(anyPosterLoaded);
+        }
+
+        private static void ApplyPosterTransform(GameObject poster, PosterData data, Transform parent)
+        {
+            poster.name = data.Name;
+            poster.transform.SetParent(parent);
+            poster.transform.position = data.Position;
+            poster.transform.rotation = Quaternion.Euler(data.Rotation);
+            poster.transform.localScale = data.Scale;
+        }
+
+        private static bool TryAssignPosterContent(
+            GameObject poster,
+            string posterName,
+            Dictionary<string, (Texture2D? texture, string filePath, bool isVideo)> prioritizedContent)
+        {
+            var key = posterName.ToLower();
+
+            if (!prioritizedContent.TryGetValue(key, out var content)
+                || !Plugin.ModConfig.IsFileEnabled(content.filePath))
+            {
+                Plugin.Log.LogWarning($"No enabled texture found for {posterName}. Destroying the poster");
+                UnityEngine.Object.Destroy(poster);
+                return false;
+            }
+
+            var renderer = poster.AddComponent<PosterRenderer>();
+            var meshRenderer = poster.GetComponent<MeshRenderer>();
+            renderer.Initialize(content.texture, content.isVideo ? content.filePath : null, meshRenderer?.material);
+            CreatedPosters.Add(poster);
+            return true;
+        }
+
+        private static void FinalizeRender(bool anyPosterLoaded, GameObject hangarShip, GameObject? posterPlane)
+        {
             if (anyPosterLoaded)
             {
-                if (posterPlane != null)
-                {
-                    UnityEngine.Object.Destroy(posterPlane);
-                }
+                if (posterPlane != null) UnityEngine.Object.Destroy(posterPlane);
                 var vanillaPlane = hangarShip.transform.Find("Plane")?.gameObject;
-                if (vanillaPlane != null)
-                {
-                    UnityEngine.Object.Destroy(vanillaPlane);
-                }
+                if (vanillaPlane != null) UnityEngine.Object.Destroy(vanillaPlane);
                 Plugin.Log.LogInfo("Posters created successfully!");
+                return;
             }
-            else
+
+            if (posterPlane != null)
             {
-                if (posterPlane != null)
-                {
-                    posterPlane.SetActive(true);
-                    Plugin.Log.LogWarning("Re-enabled vanilla Plane.001 poster due to no textures loaded");
-                }
+                posterPlane.SetActive(true);
+                Plugin.Log.LogWarning("Re-enabled vanilla Plane.001 poster due to no textures loaded");
             }
         }
 
@@ -575,8 +642,6 @@ namespace CustomPosters
         {
             try
             {
-                var validExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".mp4" };
-
                 var postersPath = Path.Combine(pack, "posters");
                 var tipsPath = Path.Combine(pack, "tips");
                 var nestedPostersPath = Path.Combine(pack, "CustomPosters", "posters");
@@ -587,7 +652,7 @@ namespace CustomPosters
 
                 foreach (var p in paths)
                 {
-                    if (Directory.EnumerateFiles(p).Any(f => validExtensions.Contains(Path.GetExtension(f).ToLower())))
+                    if (Directory.EnumerateFiles(p).Any(f => f.IsValidPosterFile()))
                         return true;
                 }
 
@@ -602,7 +667,6 @@ namespace CustomPosters
             return false;
         }
 
-
         private static IEnumerator DelayedUpdateMaterialsAsync(StartOfRound instance)
         {
             if (_materialsUpdated)
@@ -615,7 +679,6 @@ namespace CustomPosters
 
             _materialsUpdated = true;
         }
-
 
         public static void ChangePosterPack(string packName)
         {

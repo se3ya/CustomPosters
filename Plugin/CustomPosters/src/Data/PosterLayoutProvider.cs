@@ -23,66 +23,7 @@ namespace CustomPosters.Data
 
             if (twoStoryShip)
             {
-                if (twoStoryLegacy)
-                {
-                    if (widerShip)
-                    {
-                        Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (Legacy) + WiderShip");
-                        return PosterLayouts.Legacy.TwoStoryShip_WiderShip.Get();
-                    }
-                }
-
-                if (shipWindows && widerShip && !rightWindow)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows + WiderShip  (No right window)");
-                    return TwoStoryShip_WiderShip.Get();
-                }
-
-                if (shipWindows && widerShip)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows + WiderShip");
-                    return TwoStoryShip_WiderShip.Get();
-                }
-
-                if (widerShip && !enableLeftWindows)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + WiderShip (No left window)");
-                    return TwoStoryShip_WiderShip.Get();
-                }
-
-                if (shipWindows)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + ShipWindows");
-                    return TwoStoryShip.Get();
-                }
-
-                if (widerShip)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship + WiderShip");
-                    return TwoStoryShip_WiderShip.Get();
-                }
-
-                if (!enableRightWindows && !enableLeftWindows)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (No both windows)");
-                    return TwoStoryShip.Get();
-                }
-
-                if (enableRightWindows && enableLeftWindows)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (All windows)");
-                    return TwoStoryShip.Get();
-                }
-                if (!enableRightWindows)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (No right window)");
-                    return TwoStoryShip.Get();
-                }
-                if (!enableLeftWindows)
-                {
-                    Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (No left window)");
-                    return TwoStoryShip.Get();
-                }
+                return GetTwoStoryLayout(twoStoryLegacy, widerShip, shipWindows, rightWindow, enableRightWindows, enableLeftWindows);
             }
 
             if (shipWindows && rightWindow && widerShip && widerShipSide == "Left")
@@ -110,6 +51,33 @@ namespace CustomPosters.Data
 
             Plugin.Log.LogInfo("Choosing layout: Vanilla");
             return Vanilla.Get();
+        }
+        private static PosterData[] GetTwoStoryLayout(
+            bool legacy, bool widerShip, bool shipWindows, bool rightWindow,
+            bool enableRightWindows, bool enableLeftWindows)
+        {
+            if (legacy && widerShip)
+            {
+                Plugin.Log.LogInfo("Choosing layout: 2 Story Ship (Legacy) + WiderShip");
+                return PosterLayouts.Legacy.TwoStoryShip_WiderShip.Get();
+            }
+
+            if (widerShip)
+            {
+                var detail = shipWindows
+                    ? (rightWindow ? " + ShipWindows" : " + ShipWindows (No right window)")
+                    : (!enableLeftWindows ? " (No left window)" : "");
+                Plugin.Log.LogInfo($"Choosing layout: 2 Story Ship + WiderShip{detail}");
+                return TwoStoryShip_WiderShip.Get();
+            }
+
+            var suffix = shipWindows ? " + ShipWindows"
+                : (!enableRightWindows && !enableLeftWindows) ? " (No both windows)"
+                : (enableRightWindows && enableLeftWindows) ? " (All windows)"
+                : !enableRightWindows ? " (No right window)"
+                : " (No left window)";
+            Plugin.Log.LogInfo($"Choosing layout: 2 Story Ship{suffix}");
+            return TwoStoryShip.Get();
         }
     }
 }

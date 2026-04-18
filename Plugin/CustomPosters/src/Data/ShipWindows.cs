@@ -41,7 +41,6 @@ namespace CustomPosters.Data.PosterLayouts
                     Name = Constants.PosterNamePoster4
                 },
 
-
                 usePoster5Vanilla
                     ? PosterHelper.Poster5Vanilla(
                         new Vector3(5.5286f, 2.5882f, -17.3421f),

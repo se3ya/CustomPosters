@@ -6,14 +6,10 @@ namespace CustomPosters.Networking
 {
     internal static class PosterSyncManager
     {
-        private const string PackSyncIdentifier = Constants.PackSyncIdentifier;
         private static readonly LNetworkMessage<string> SyncPackMessage = LNetworkMessage<string>.Connect(
             identifier: Constants.PackSyncIdentifier,
             onClientReceived: PosterManager.SetPackForClients
         );
-
-        private const string VideoRequestIdentifier = Constants.VideoRequestIdentifier;
-        private const string VideoSyncIdentifier = Constants.VideoSyncIdentifier;
 
         private static readonly LNetworkMessage<string> RequestVideoTimeMessage = LNetworkMessage<string>.Connect(
             identifier: Constants.VideoRequestIdentifier,

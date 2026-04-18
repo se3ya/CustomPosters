@@ -30,6 +30,17 @@ namespace CustomPosters
 
         public PosterService()
         {
+            DiscoverPosterPacks();
+            LogDiscoveredPacks();
+            InitializeBiggerShip();
+            InitializeShipWindows();
+            InitializeWiderShipMod();
+            Initialize2StoryShipMod();
+            SetRandomSeed(Environment.TickCount);
+        }
+
+        private void DiscoverPosterPacks()
+        {
             try
             {
                 var pluginPath = Paths.PluginPath;
@@ -81,49 +92,47 @@ namespace CustomPosters
             {
                 Plugin.Log.LogError($"Error scanning for poster packs: {ex.Message}");
             }
+        }
 
+        private void LogDiscoveredPacks()
+        {
             try
             {
-                if (_posterFolders.Count > 0)
-                {
-                    var counts = new List<string>();
-                    foreach (var pack in _posterFolders)
-                    {
-                        int count = 0;
-                        try
-                        {
-                            var postersPath = Path.Combine(pack, "posters");
-                            if (Directory.Exists(postersPath))
-                            {
-                                count += Directory.GetFiles(postersPath)
-                                    .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
-                            }
+                if (_posterFolders.Count == 0) return;
 
-                            var tipsPath = Path.Combine(pack, "tips");
-                            if (Directory.Exists(tipsPath))
-                            {
-                                count += Directory.GetFiles(tipsPath)
-                                    .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
-                            }
+                var counts = _posterFolders
+                    .Select(pack => $"{PathUtils.GetDisplayPackName(pack)}={CountValidFiles(pack)}")
+                    .ToList();
 
-                            count += Directory.GetFiles(pack)
-                                .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
-                        }
-                        catch { }
-
-                        counts.Add($"{PathUtils.GetDisplayPackName(pack)}={count}");
-                    }
-
-                    Plugin.Log.LogDebug($"Poster packs discovered: {_posterFolders.Count}; files per pack: {string.Join(", ", counts)}");
-                }
+                Plugin.Log.LogDebug($"Poster packs discovered: {_posterFolders.Count}; files per pack: {string.Join(", ", counts)}");
             }
             catch { }
+        }
 
-            InitializeBiggerShip();
-            InitializeShipWindows();
-            InitializeWiderShipMod();
-            Initialize2StoryShipMod();
-            SetRandomSeed(Environment.TickCount);
+        private static int CountValidFiles(string pack)
+        {
+            try
+            {
+                int count = 0;
+                var postersPath = Path.Combine(pack, "posters");
+                if (Directory.Exists(postersPath))
+                {
+                    count += Directory.GetFiles(postersPath)
+                        .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                }
+
+                var tipsPath = Path.Combine(pack, "tips");
+                if (Directory.Exists(tipsPath))
+                {
+                    count += Directory.GetFiles(tipsPath)
+                        .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                }
+
+                count += Directory.GetFiles(pack)
+                    .Count(f => Constants.AllValidExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
+                return count;
+            }
+            catch { return 0; }
         }
 
         private bool IsValidPosterPack(string folderPath)
@@ -380,7 +389,7 @@ namespace CustomPosters
                 ".mp4" => 5,
                 _ => int.MaxValue
             };
-            return basePriority * 1000 + Rand.Next(0, 1000);
+            return (basePriority * 1000) + Rand.Next(0, 1000);
         }
     }
 }

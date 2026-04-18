@@ -7,7 +7,7 @@ namespace CustomPosters.Utils
 {
     internal static class SavePersistenceManager
     {
-    private const string Es3Key = Constants.Es3SelectedPackKey;
+        private const string Es3Key = Constants.Es3SelectedPackKey;
 
         public static string? TryGetCurrentSaveId()
         {
@@ -23,8 +23,9 @@ namespace CustomPosters.Utils
                     if (!string.IsNullOrEmpty(value)) return value!;
                 }
             }
-            catch
+            catch (Exception)
             {
+                // fucky fuck fuck
             }
             return null;
         }

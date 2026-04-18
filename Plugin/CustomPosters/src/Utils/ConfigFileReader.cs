@@ -81,7 +81,7 @@ namespace CustomPosters.Utils
                 {
                     var trimmed = line.Trim();
 
-                    if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                    if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
                     {
                         inSection = trimmed.Equals($"[{sectionHeader}]", StringComparison.OrdinalIgnoreCase);
                         continue;
@@ -120,7 +120,7 @@ namespace CustomPosters.Utils
                     var line = rawLine.Trim();
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    if (line.StartsWith("[") && line.EndsWith("]"))
+                    if (line.StartsWith('[') && line.EndsWith(']'))
                     {
                         var current = line.Substring(1, line.Length - 2).Trim();
                         inSection = string.Equals(current, sectionHeader, StringComparison.OrdinalIgnoreCase);

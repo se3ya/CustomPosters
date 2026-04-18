@@ -261,12 +261,12 @@ namespace CustomPosters
         {
             if (_fileConfigs.TryGetValue(Path.GetFullPath(filePath), out var config))
             {
-                int volume = config.Volume?.Value ?? 10;
-                float maxDistance = config.MaxDistance?.Value ?? 3.5f;
+                int volume = config.Volume?.Value ?? Constants.DefaultVideoVolume;
+                float maxDistance = config.MaxDistance?.Value ?? Constants.DefaultVideoMaxDistance;
                 VideoAspectRatio aspectRatio = config.AspectRatio?.Value ?? VideoAspectRatio.Stretch;
                 return (volume, maxDistance, aspectRatio);
             }
-            return (10, 3.5f, VideoAspectRatio.Stretch);
+            return (Constants.DefaultVideoVolume, Constants.DefaultVideoMaxDistance, VideoAspectRatio.Stretch);
         }
 
         private static string PackName(string packPath)
