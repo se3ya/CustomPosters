@@ -64,20 +64,29 @@ namespace CustomPosters.Data
 
             if (widerShip)
             {
-                var detail = shipWindows
-                    ? (rightWindow ? " + ShipWindows" : " + ShipWindows (No right window)")
-                    : (!enableLeftWindows ? " (No left window)" : "");
-                Plugin.Log.LogInfo($"Choosing layout: 2 Story Ship + WiderShip{detail}");
+                Plugin.Log.LogInfo($"Choosing layout: 2 Story Ship + WiderShip{GetWiderShipDetail(shipWindows, rightWindow, enableLeftWindows)}");
                 return TwoStoryShip_WiderShip.Get();
             }
 
-            var suffix = shipWindows ? " + ShipWindows"
-                : (!enableRightWindows && !enableLeftWindows) ? " (No both windows)"
-                : (enableRightWindows && enableLeftWindows) ? " (All windows)"
-                : !enableRightWindows ? " (No right window)"
-                : " (No left window)";
-            Plugin.Log.LogInfo($"Choosing layout: 2 Story Ship{suffix}");
+            Plugin.Log.LogInfo($"Choosing layout: 2 Story Ship{GetTwoStorySuffix(shipWindows, enableRightWindows, enableLeftWindows)}");
             return TwoStoryShip.Get();
+        }
+
+        private static string GetWiderShipDetail(bool shipWindows, bool rightWindow, bool enableLeftWindows)
+        {
+            if (shipWindows && rightWindow) return " + ShipWindows";
+            if (shipWindows) return " + ShipWindows (No right window)";
+            if (!enableLeftWindows) return " (No left window)";
+            return "";
+        }
+
+        private static string GetTwoStorySuffix(bool shipWindows, bool enableRightWindows, bool enableLeftWindows)
+        {
+            if (shipWindows) return " + ShipWindows";
+            if (!enableRightWindows && !enableLeftWindows) return " (No both windows)";
+            if (enableRightWindows && enableLeftWindows) return " (All windows)";
+            if (!enableRightWindows) return " (No right window)";
+            return " (No left window)";
         }
     }
 }
