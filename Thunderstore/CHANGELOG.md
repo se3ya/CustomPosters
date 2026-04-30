@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.4] - 2026-04-18
 
+### Fixed
+
+- Fixed clients showing posters from a previous lobby with the correct ones when rejoining
+
 ### Changed
 
 - Internal code cleanup and refactoring

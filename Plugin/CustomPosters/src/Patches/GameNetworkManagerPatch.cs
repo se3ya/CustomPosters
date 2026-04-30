@@ -42,6 +42,7 @@ namespace CustomPosters.Patches
         [HarmonyPatch("JoinLobby")]
         private static void OnJoinLobbyPatch()
         {
+            PosterManager.ResetSession();
             PosterManager.IsNewLobby = true;
         }
     }

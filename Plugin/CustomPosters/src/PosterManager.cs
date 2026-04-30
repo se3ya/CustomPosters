@@ -14,7 +14,8 @@ namespace CustomPosters
 {
     internal static class PosterManager
     {
-        private static bool _materialsUpdated = false;
+        private static bool _isUpdating = false;
+        private static bool _needsReUpdate = false;
         internal static string? _selectedPack = null;
         public static string? SelectedPack => _selectedPack;
         private static readonly List<GameObject> CreatedPosters = new List<GameObject>();
@@ -30,6 +31,8 @@ namespace CustomPosters
             _sessionSeedInitialized = false;
             _sessionMapSeed = 0;
             _selectedPack = null;
+            _isUpdating = false;
+            _needsReUpdate = false;
             Plugin.Log.LogDebug("Session randomization reset.");
         }
 
@@ -47,11 +50,17 @@ namespace CustomPosters
                 return;
             }
 
-            _materialsUpdated = false;
             StartOfRound instance = StartOfRound.Instance;
             if (instance != null && instance.inShipPhase)
             {
-                instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
+                if (_isUpdating)
+                {
+                    _needsReUpdate = true;
+                }
+                else
+                {
+                    instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
+                }
             }
         }
 
@@ -82,7 +91,8 @@ namespace CustomPosters
 
         public static void OnRoundStart(StartOfRound instance)
         {
-            _materialsUpdated = false;
+            _isUpdating = false;
+            _needsReUpdate = false;
 
             if (IsNewLobby && ShouldActAsHost)
             {
@@ -669,15 +679,24 @@ namespace CustomPosters
 
         private static IEnumerator DelayedUpdateMaterialsAsync(StartOfRound instance)
         {
-            if (_materialsUpdated)
+            if (_isUpdating)
                 yield break;
+
+            _isUpdating = true;
 
             yield return new WaitForEndOfFrame();
 
-            HideVanillaPosterPlane();
-            yield return instance.StartCoroutine(CreateCustomPostersAsync());
+            while (true)
+            {
+                _needsReUpdate = false;
 
-            _materialsUpdated = true;
+                HideVanillaPosterPlane();
+                yield return instance.StartCoroutine(CreateCustomPostersAsync());
+
+                if (!_needsReUpdate) break;
+            }
+
+            _isUpdating = false;
         }
 
         public static void ChangePosterPack(string packName)
@@ -706,11 +725,17 @@ namespace CustomPosters
             Plugin.Service.SetRandomSeed(Environment.TickCount);
             Plugin.Log.LogInfo($"Changed poster pack to - {_selectedPack}");
 
-            _materialsUpdated = false;
             StartOfRound? instance = StartOfRound.Instance;
             if (instance != null && instance.inShipPhase)
             {
-                instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
+                if (_isUpdating)
+                {
+                    _needsReUpdate = true;
+                }
+                else
+                {
+                    instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
+                }
             }
         }
     }

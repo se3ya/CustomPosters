@@ -1,4 +1,7 @@
-- .mp4 video links and images links.
+- .mp4 video links and images links. **(canceled)**
+
+- Dynamic posters without updating mod.
+  - today poster1 is A, tomorrow poster1 is B
 
 - Clickable posters.
 
