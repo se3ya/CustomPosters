@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed clients showing posters from a previous lobby with the correct ones when rejoining
+- Fixed clients having posters from a previous lobby with the correct ones when rejoining
+
+### Removed
+
+- Removed motion blur for poster prefabs
 
 ### Changed
 

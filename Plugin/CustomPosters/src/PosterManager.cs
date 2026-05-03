@@ -17,7 +17,10 @@ namespace CustomPosters
         private static bool _isUpdating = false;
         private static bool _needsReUpdate = false;
         internal static string? _selectedPack = null;
+        private static bool _clientSeedReceived = false;
+        private static int _currentHostSeed = 0;
         public static string? SelectedPack => _selectedPack;
+        public static int CurrentHostSeed => _currentHostSeed;
         private static readonly List<GameObject> CreatedPosters = new List<GameObject>();
         private static int _sessionMapSeed = 0;
         private static bool _sessionSeedInitialized = false;
@@ -31,9 +34,31 @@ namespace CustomPosters
             _sessionSeedInitialized = false;
             _sessionMapSeed = 0;
             _selectedPack = null;
+            _clientSeedReceived = false;
+            _currentHostSeed = 0;
             _isUpdating = false;
             _needsReUpdate = false;
             Plugin.Log.LogDebug("Session randomization reset.");
+        }
+
+        public static void OnSceneAwake()
+        {
+            _isUpdating = false;
+            _needsReUpdate = false;
+
+            if (!Plugin.ModConfig.EnableNetworking.Value) return;
+            if (NetworkManager.Singleton == null) return;
+
+            if (NetworkManager.Singleton.IsHost)
+            {
+                _currentHostSeed = 0;
+                return;
+            }
+
+            _clientSeedReceived = false;
+            _selectedPack = null;
+            _currentHostSeed = 0;
+            Plugin.Log.LogDebug("Client per lobby state reset, waiting for host seed.");
         }
 
         public static void SetPackForClients(string packName)
@@ -42,13 +67,37 @@ namespace CustomPosters
             if (NetworkManager.Singleton == null) return;
             if (NetworkManager.Singleton.IsHost) return;
 
-            Plugin.Log.LogDebug($"Client received selected pack from host: {PathUtils.GetPrettyPath(packName)}");
+            Plugin.Log.LogDebug($"Client received selected pack from host - {PathUtils.GetPrettyPath(packName)}");
             _selectedPack = LocalPackPath(packName);
             if (string.IsNullOrEmpty(_selectedPack))
             {
                 Plugin.Log.LogWarning("Could not resolve host selected pack on client. Keeping vanilla posters.");
                 return;
             }
+
+            StartOfRound instance = StartOfRound.Instance;
+            if (instance != null && instance.inShipPhase)
+            {
+                if (_isUpdating)
+                {
+                    _needsReUpdate = true;
+                }
+                else
+                {
+                    instance.StartCoroutine(DelayedUpdateMaterialsAsync(instance));
+                }
+            }
+        }
+
+        public static void SetSeedForClients(int seed)
+        {
+            if (!Plugin.ModConfig.EnableNetworking.Value) return;
+            if (NetworkManager.Singleton == null) return;
+            if (NetworkManager.Singleton.IsHost) return;
+
+            Plugin.Log.LogDebug($"Client received seed from host: {seed}");
+            Plugin.Service.SetRandomSeed(seed);
+            _clientSeedReceived = true;
 
             StartOfRound instance = StartOfRound.Instance;
             if (instance != null && instance.inShipPhase)
@@ -99,6 +148,8 @@ namespace CustomPosters
                 InitializeSessionSeedIfNeeded();
                 var seedToUse = ComputeSeedAndMaybeLoadSavePack(Plugin.ModConfig.KeepPackFor.Value);
                 Plugin.Service.SetRandomSeed(seedToUse);
+                _currentHostSeed = seedToUse;
+                PosterSyncManager.SendSeed(seedToUse);
             }
 
             if (instance.inShipPhase)
@@ -347,6 +398,13 @@ namespace CustomPosters
             if (Plugin.ModConfig.RandomizerModeSetting.Value == PosterConfig.RandomizerMode.PerPack)
             {
                 return TryResolvePerPackSelection(enabledPacks, posterPlane, out packsToUse);
+            }
+
+            if (Plugin.ModConfig.EnableNetworking.Value && !ShouldActAsHost && !_clientSeedReceived)
+            {
+                Plugin.Log.LogInfo("Client is waiting for host to send seed...");
+                if (posterPlane != null) posterPlane.SetActive(true);
+                return false;
             }
 
             Plugin.Log.LogInfo("PerPoster mode enabled.");

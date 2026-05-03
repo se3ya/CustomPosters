@@ -46,6 +46,7 @@ namespace CustomPosters
 
         // networking message identifiers
         public const string PackSyncIdentifier = "CustomPosters_SyncPack";
+        public const string SeedSyncIdentifier = "CustomPosters_SyncSeed";
         public const string VideoRequestIdentifier = "CustomPosters_RequestVideoTime";
         public const string VideoSyncIdentifier = "CustomPosters_SyncVideoTime";
 

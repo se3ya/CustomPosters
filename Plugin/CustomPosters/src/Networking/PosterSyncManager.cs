@@ -11,6 +11,11 @@ namespace CustomPosters.Networking
             onClientReceived: PosterManager.SetPackForClients
         );
 
+        private static readonly LNetworkMessage<int> SyncSeedMessage = LNetworkMessage<int>.Connect(
+            identifier: Constants.SeedSyncIdentifier,
+            onClientReceived: PosterManager.SetSeedForClients
+        );
+
         private static readonly LNetworkMessage<string> RequestVideoTimeMessage = LNetworkMessage<string>.Connect(
             identifier: Constants.VideoRequestIdentifier,
             onServerReceived: OnVideoTimeRequested
@@ -41,6 +46,18 @@ namespace CustomPosters.Networking
                 SyncPackMessage.SendClients(packName);
             }
         }
+
+        public static void SendSeed(int seed)
+        {
+            if (!Plugin.ModConfig.EnableNetworking.Value) return;
+            if (NetworkManager.Singleton == null) return;
+
+            if (NetworkManager.Singleton.IsHost)
+            {
+                Plugin.Log.LogDebug($"Sending seed to all clients - {seed}");
+                SyncSeedMessage.SendClients(seed);
+            }
+        }
         
         public static void OnClientConnected(ulong clientId)
         {
@@ -61,6 +78,12 @@ namespace CustomPosters.Networking
                 {
                     Plugin.Log.LogDebug($"New client joined, sending pack: {PathUtils.GetPrettyPath(PosterManager.SelectedPack)}");
                     SyncPackMessage.SendClient(PosterManager.SelectedPack, clientId);
+                }
+
+                if (PosterManager.CurrentHostSeed != 0)
+                {
+                    Plugin.Log.LogDebug($"New client joined, sending seed - {PosterManager.CurrentHostSeed}");
+                    SyncSeedMessage.SendClient(PosterManager.CurrentHostSeed, clientId);
                 }
             }
         }
